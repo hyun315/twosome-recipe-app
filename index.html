@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>투썸 레시피 · 제조 순서 도우미</title>
+<style>
+  :root{
+    --coffee-950:#181009;
+    --coffee-900:#2b1a10;
+    --coffee-800:#40270f;
+    --coffee-700:#5a331d;
+    --coffee-500:#8a5a34;
+    --cream:#ffffff;
+    --cream-2:#e8dcc8;
+    --caramel:#e8912a;
+    --caramel-2:#ffab3d;
+    --mint:#5fe089;
+    --danger:#ff6b52;
+    --line: rgba(255,255,255,0.18);
+    font-size:16px;
+  }
+  *{box-sizing:border-box;}
+  html{ background: #181009; }
+  html,body{margin:0;padding:0; min-height:100%;}
+  body{
+    background: var(--coffee-950);
+    color: var(--cream);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    padding-bottom: 100px;
+  }
+  /* header */
+  header{
+    position: sticky; top:0; z-index: 40;
+    background: linear-gradient(180deg, var(--coffee-950) 70%, rgba(28,18,11,0.85));
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand{
+    display:flex; align-items:baseline; gap:8px; margin-bottom:10px;
+  }
+  .brand .mark{
+    font-family: Georgia, "Noto Serif KR", serif;
+    font-size: 1.05rem; letter-spacing: 0.06em; color: var(--caramel-2);
+    border: 1px solid var(--caramel-2); border-radius: 3px; padding: 1px 6px;
+  }
+  .brand h1{
+    font-size: 1.15rem; font-weight: 700; margin:0; color: var(--cream);
+    letter-spacing: -0.01em;
+  }
+  .searchwrap{ position:relative; }
+  #search{
+    width:100%; padding: 12px 40px 12px 14px; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--coffee-900); color: var(--cream);
+    font-size: 1rem; outline:none;
+  }
+  #search:focus{ border-color: var(--caramel); }
+  .searchwrap svg{ position:absolute; right:12px; top:50%; transform:translateY(-50%); opacity:0.6;}
+  .tabs{ display:flex; gap:6px; margin-top:10px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{
+    flex: 0 0 auto; padding:6px 12px; border-radius:999px; font-size:0.8rem;
+    background: var(--coffee-900); border:1px solid var(--line); color: var(--cream-2);
+    white-space:nowrap; cursor:pointer;
+  }
+  .tab.active{ background: var(--caramel); border-color: var(--caramel); color: var(--coffee-950); font-weight:700;}
+
+  main{ padding: 14px 16px 40px; max-width: 720px; margin: 0 auto; background: var(--coffee-950); min-height: 60vh; }
+
+  .empty{ text-align:center; color: var(--cream-2); padding: 60px 20px; font-size:0.9rem; }
+
+  /* list */
+  .item{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding: 13px 4px; border-bottom: 1px solid var(--line); cursor:pointer;
+  }
+  .item .left{ flex:1; min-width:0; }
+  .item .name{ font-size:0.98rem; font-weight:600; color: var(--cream); }
+  .item .meta{ font-size:0.76rem; color: var(--caramel-2); margin-top:3px; }
+  .item .sizes{ font-size:0.72rem; color: var(--cream-2); margin-left:6px; }
+  .item{ border-left: 3px solid transparent; padding-left: 10px; }
+  .addbtn{
+    flex:0 0 auto; width:34px; height:34px; border-radius:50%;
+    background: var(--coffee-800); border:1px solid var(--line); color: var(--caramel-2);
+    font-size:1.2rem; display:flex; align-items:center; justify-content:center;
+  }
+  .addbtn:active{ background: var(--caramel); color:var(--coffee-950); }
+
+  /* detail sheet */
+  .sheet-backdrop{
+    position:fixed; inset:0; background: rgba(0,0,0,0.55); z-index:60;
+    display:none;
+  }
+  .sheet{
+    position:fixed; left:0; right:0; bottom:0; z-index:61;
+    background: var(--coffee-900); border-radius: 18px 18px 0 0;
+    max-height: 88vh; overflow-y:auto;
+    padding: 10px 18px 28px;
+    transform: translateY(100%); transition: transform .22s ease;
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.4);
+  }
+  .sheet.open{ transform: translateY(0); }
+  .sheet-backdrop.open{ display:block; }
+  .grabber{ width:36px; height:4px; background: var(--line); border-radius:2px; margin: 6px auto 12px; }
+  .sheet h2{ margin:0 0 2px; font-size:1.25rem; }
+  .sheet .code{ color: var(--caramel-2); font-size:0.8rem; margin-bottom:14px; }
+  .sizeToggle{ display:flex; gap:6px; margin-bottom:14px; }
+  .sizeToggle button{
+    flex:1; padding:9px 0; border-radius:10px; border:1px solid var(--line);
+    background: var(--coffee-800); color:var(--cream-2); font-weight:700; font-size:0.85rem;
+  }
+  .sizeToggle button.active{ background: var(--caramel); color:var(--coffee-950); border-color:var(--caramel); }
+  .sectionLabel{ font-size:0.78rem; color: var(--caramel-2); font-weight:700; margin: 16px 0 6px; letter-spacing:0.03em; }
+  table.ing{ width:100%; border-collapse:collapse; font-size:0.88rem; }
+  table.ing td{ padding:7px 4px; border-bottom:1px solid var(--line); }
+  table.ing td:first-child{ color:var(--cream); }
+  table.ing td:last-child{ text-align:right; color:var(--cream-2); }
+  .steps{ margin:0; padding-left:0; list-style:none; }
+  .steps li{ display:flex; gap:8px; padding:7px 0; font-size:0.9rem; line-height:1.4; border-bottom:1px dashed var(--line); }
+  .steps li .n{ flex:0 0 20px; color:var(--caramel-2); font-weight:700; }
+  .tierBadge{ display:inline-block; margin-top:14px; padding:4px 10px; border-radius:999px; font-size:0.75rem; font-weight:700; }
+  .tier1{ background: rgba(200,130,58,0.22); color:var(--caramel-2); }
+  .tier2{ background: rgba(126,168,138,0.2); color:var(--mint); }
+  .tier3{ background: rgba(244,234,217,0.12); color:var(--cream-2); }
+  .sheetAdd{
+    margin-top:20px; width:100%; padding:14px; border-radius:12px; border:none;
+    background: var(--caramel); color:var(--coffee-950); font-weight:800; font-size:1rem;
+  }
+  .closeX{ position:absolute; top:14px; right:16px; background:none; border:none; color:var(--cream-2); font-size:1.3rem; }
+
+  /* order fab + panel */
+  .fab{
+    position:fixed; right:16px; bottom:16px; z-index:50;
+    background: var(--caramel); color:var(--coffee-950); border-radius:999px;
+    padding: 13px 18px; font-weight:800; font-size:0.95rem; box-shadow:0 6px 18px rgba(0,0,0,0.4);
+    display:flex; align-items:center; gap:8px; border:none;
+  }
+  .fab .badge{ background: var(--coffee-950); color:var(--caramel-2); border-radius:999px; padding:1px 8px; font-size:0.8rem; }
+  .fab.hidden{ display:none; }
+
+  .orderPanel{
+    position:fixed; inset:0; z-index:70; background: var(--coffee-950);
+    transform: translateX(100%); transition: transform .22s ease; overflow-y:auto;
+  }
+  .orderPanel.open{ transform: translateX(0); }
+  .opHeader{ position:sticky; top:0; background:var(--coffee-950); padding:16px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; z-index:2;}
+  .opHeader h2{ margin:0; font-size:1.15rem; }
+  .opBody{ padding: 6px 16px 120px; max-width:720px; margin:0 auto; }
+  .queueEmpty{ text-align:center; padding:60px 20px; color:var(--cream-2); font-size:0.9rem; }
+
+  .orderCard{
+    background: var(--coffee-900); border:1px solid var(--line); border-radius:14px;
+    padding:14px; margin-top:12px; position:relative;
+  }
+  .orderCard .rank{
+    position:absolute; left:-10px; top:-10px; width:30px; height:30px; border-radius:50%;
+    background: var(--caramel); color:var(--coffee-950); font-weight:800; font-size:0.95rem;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 3px 8px rgba(0,0,0,0.4);
+  }
+  .orderCard.done{ opacity:0.4; }
+  .orderCard .oc-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
+  .orderCard .oc-name{ font-weight:700; font-size:1rem; }
+  .orderCard .oc-size{ font-size:0.75rem; color:var(--caramel-2); margin-top:2px; }
+  .orderCard .oc-reason{ font-size:0.8rem; color:var(--cream-2); margin-top:6px; line-height:1.4; }
+  .oc-actions{ display:flex; gap:8px; margin-top:10px; }
+  .oc-actions button{ flex:1; padding:9px 0; border-radius:9px; border:1px solid var(--line); background:var(--coffee-800); color:var(--cream); font-size:0.85rem; font-weight:700;}
+  .oc-actions button.done-btn{ background: var(--mint); color:var(--coffee-950); border-color:var(--mint); }
+  .oc-actions button.done-btn.undo{ background: var(--coffee-800); color:var(--cream-2); }
+  .oc-actions button.del-btn{ background: var(--danger); color: var(--cream); border-color:var(--danger); flex:0 0 46px; }
+
+  .guideNote{ background: var(--coffee-800); border-radius:12px; padding:12px 14px; font-size:0.8rem; color:var(--cream-2); margin-top:14px; line-height:1.5;}
+  .guideNote b{ color:var(--caramel-2); }
+
+  .clearAll{ font-size:0.8rem; color: var(--danger); background:none; border:none; }
+
+  /* customization ref */
+  .refBtn{ width:100%; text-align:left; background:var(--coffee-900); border:1px solid var(--line); color:var(--cream-2); padding:12px 14px; border-radius:12px; font-size:0.85rem; margin: 6px 0 14px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><span class="mark">TS</span><h1>레시피 &amp; 제조 순서 도우미</h1></div>
+  <div class="searchwrap">
+    <input id="search" placeholder="음료 이름 또는 코드 검색 (예: 라떼, VL, 아인슈페너)" autocomplete="off">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  </div>
+  <div class="tabs" id="tabs"></div>
+</header>
+
+<main>
+  <button class="refBtn" id="refToggle">⚙ 고객 요청사항(시럽·휘핑·우유변경·드리즐) 기준표 보기</button>
+  <div id="refPanel" style="display:none;"></div>
+  <div id="list"></div>
+  <div class="empty" id="emptyMsg" style="display:none;">검색 결과가 없어요.</div>
+</main>
+
+<button class="fab" id="fab"><span>🧾 주문 목록</span><span class="badge" id="fabCount">0</span></button>
+
+<div class="sheet-backdrop" id="backdrop"></div>
+<div class="sheet" id="sheet">
+  <button class="closeX" id="sheetClose">✕</button>
+  <div class="grabber"></div>
+  <div id="sheetContent"></div>
+</div>
+
+<div class="orderPanel" id="orderPanel">
+  <div class="opHeader">
+    <h2>🧾 현재 주문 · 제조 순서</h2>
+    <div style="display:flex; gap:14px; align-items:center;">
+      <button class="clearAll" id="clearAll">전체 비우기</button>
+      <button class="closeX" id="opClose" style="position:static;">✕</button>
+    </div>
+  </div>
+  <div class="opBody" id="opBody"></div>
+</div>
+
+<script>
+/* ===================== DATA ===================== */
+// tier 는 화면에서 steps 텍스트로 자동 분류하므로 여기선 재료/공정만 담는다.
+const MENU = [
+// ---- 커피 1 ----
+{n:"에스프레소",c:"E",cat:"커피",sizes:["R","L"],ing:[{m:"에스프레소",R:"1(single)",L:"2(single)",u:"shot"}],
+ steps:["제공잔 예열 후 에스프레소 추출"]},
+{n:"카페 아메리카노(HOT)",c:"A",cat:"커피",sizes:["R","L"],ing:[{m:"에스프레소",R:2,L:3,u:"shot"},{m:"온수",R:"270(상단1.5cm)",L:"350(상단1.5cm)",u:"g"}],
+ steps:["제공잔에 에스프레소 넣기","온수 넣기"]},
+{n:"아이스 카페 아메리카노",c:"A",cat:"커피",sizes:["R","L","M"],ing:[{m:"정수물",R:145,L:190,M:215,u:"g"},{m:"에스프레소",R:2,L:3,M:4,u:"shot"},{m:"얼음(에스프레소 포함 제조 윗선까지)",R:180,L:210,M:250,u:"g"}],
+ steps:["제공잔에 정수물 넣기","에스프레소 넣기","얼음 넣기"]},
+{n:"카페 라떼(HOT)",c:"L",cat:"커피",sizes:["R","L"],ing:[{m:"에스프레소",R:2,L:3,u:"shot"},{m:"스팀우유",R:"250(상단2cm)",L:"330(상단2cm)",u:"g"},{m:"우유거품",R:"15(상단1cm)",L:"15(상단1cm)",u:"g"}],
+ steps:["제공잔에 에스프레소 넣기","스팀우유 넣기","우유거품 넣기"]},
+{n:"아이스 카페라떼",c:"L",cat:"커피",sizes:["R","L","M"],ing:[{m:"우유",R:150,L:195,M:220,u:"g"},{m:"에스프레소",R:2,L:3,M:4,u:"shot"},{m:"얼음(에스프레소 포함 제조 윗선까지)",R:175,L:210,M:240,u:"g"}],
+ steps:["제공잔에 우유 넣기","에스프레소 넣기","얼음 넣기"]},
+{n:"카푸치노(HOT)",c:"C",cat:"커피",sizes:["R","L"],ing:[{m:"에스프레소",R:2,L:3,u:"shot"},{m:"스팀우유",R:"180(상단3.5cm)",L:"225(상단4.5cm)",u:"g"},{m:"우유거품",R:"35(상단0.5cm)",L:"45(상단0.5cm)",u:"g"}],
+ steps:["제공잔에 에스프레소 넣기","스팀우유 넣기","우유거품 넣기"]},
+{n:"바닐라 카페라떼(HOT)",c:"VL",cat:"커피",sizes:["R","L"],ing:[{m:"바닐라시럽",R:3,L:4,u:"pump"},{m:"에스프레소",R:2,L:3,u:"shot"},{m:"스팀우유",R:"230(상단2cm)",L:"315(상단2cm)",u:"g"},{m:"우유거품",R:"15(상단1cm)",L:"15(상단1cm)",u:"g"}],
+ steps:["제공잔에 바닐라시럽 넣기","에스프레소 넣기","스팀우유 넣기","우유거품 넣기"]},
+{n:"아이스 바닐라 카페라떼",c:"VL",cat:"커피",sizes:["R","L","M"],ing:[{m:"바닐라시럽",R:3,L:4,M:5,u:"pump"},{m:"에스프레소",R:2,L:3,M:4,u:"shot"},{m:"우유(제조 윗선까지)",R:130,L:160,M:185,u:"g"},{m:"얼음",R:170,L:210,M:240,u:"g"}],
+ steps:["제공잔에 바닐라시럽 넣기","에스프레소 넣기","우유 제조 윗선까지 넣기","얼음 넣기"]},
+{n:"카페 모카(HOT)",c:"M",cat:"커피",sizes:["R","L"],ing:[{m:"초콜릿소스",R:2,L:3,u:"pump"},{m:"에스프레소",R:2,L:3,u:"shot"},{m:"스팀우유",R:"220(상단2cm)",L:"290(상단2cm)",u:"g"},{m:"휘핑크림",R:20,L:20,u:"g"}],
+ steps:["제공잔에 초콜릿 소스 넣기","에스프레소 넣고 젓기","스팀우유 넣기","휘핑크림 올리기 (제외 시 우유거품 상단1cm까지)"]},
+{n:"아이스 카페 모카",c:"M",cat:"커피",sizes:["R","L","M"],ing:[{m:"초콜릿소스",R:2,L:3,M:3,u:"pump"},{m:"에스프레소",R:2,L:3,M:4,u:"shot"},{m:"우유(제조 윗선까지)",R:120,L:150,M:160,u:"g"},{m:"얼음",R:170,L:220,M:240,u:"g"},{m:"휘핑크림",R:25,L:30,M:30,u:"g"}],
+ steps:["제공잔에 초콜릿 소스 넣기","에스프레소 넣고 젓기","우유 제조 윗선까지 넣기","얼음 넣기","휘핑크림 올리기"]},
+// ---- 커피 2 ----
+{n:"카라멜 마키아또(HOT)",c:"CM",cat:"커피",sizes:["R","L"],ing:[{m:"바닐라시럽",R:2,L:3,u:"pump"},{m:"스팀우유",R:"235(상단3cm)",L:"300(상단4cm)",u:"g"},{m:"우유거품",R:"15(상단2cm)",L:"15(상단2.5cm)",u:"g"},{m:"에스프레소",R:2,L:3,u:"shot"},{m:"카라멜소스",R:"10(상단1cm)",L:"10(상단1cm)",u:"g"}],
+ steps:["제공잔에 바닐라시럽 넣기","스팀우유·우유거품 넣기","에스프레소 중앙에 넣기","카라멜 소스 벌집모양 드리즐"]},
+{n:"아이스 카라멜 마키아또",c:"CM",cat:"커피",sizes:["R","L","M"],ing:[{m:"바닐라시럽",R:2,L:3,M:4,u:"pump"},{m:"우유(제조 아랫선까지)",R:165,L:200,M:235,u:"g"},{m:"얼음",R:150,L:180,M:200,u:"g"},{m:"에스프레소",R:2,L:3,M:4,u:"shot"},{m:"카라멜소스",R:10,L:15,M:15,u:"g"}],
+ steps:["제공잔에 바닐라시럽 넣기","우유 제조 아랫선까지 넣기","얼음 넣기","에스프레소 중앙에 넣기","카라멜 소스 벌집모양 드리즐"]},
+{n:"스페니쉬 연유 카페라떼(HOT)",c:"SL",cat:"커피",sizes:["R","L"],ing:[{m:"연유",R:40,L:50,u:"g"},{m:"에스프레소",R:2,L:3,u:"shot"},{m:"스팀우유",R:"235(상단2cm)",L:"285(상단2cm)",u:"g"},{m:"우유거품",R:"15(상단1cm)",L:"15(상단1cm)",u:"g"}],
+ steps:["제공잔에 연유 넣기","에스프레소 넣고 젓기","스팀우유 넣기","우유거품 올리기"]},
+{n:"아이스 스페니쉬 연유 카페라떼",c:"SL",cat:"커피",sizes:["R","L","M"],ing:[{m:"연유",R:30,L:40,M:50,u:"g"},{m:"에스프레소",R:2,L:3,M:4,u:"shot"},{m:"우유(에스프레소 포함 제조 윗선까지)",R:130,L:160,M:185,u:"g"},{m:"얼음",R:170,L:210,M:240,u:"g"}],
+ steps:["제공잔에 연유 넣기","에스프레소 넣고 젓기","우유 제조 윗선까지 넣기","얼음 넣기"]},
+// ---- 커피 3 ----
+{n:"아인슈페너 2023(HOT)",c:"TES",cat:"커피",sizes:["R","L"],ing:[{m:"에스프레소",R:2,L:3,u:"shot"},{m:"스팀우유",R:"200(상단3cm)",L:"230(상단4cm)",u:"g"},{m:"휘핑크림",R:35,L:40,u:"g"},{m:"제조 생크림",R:35,L:40,u:"g"}],
+ steps:["제공잔에 에스프레소 넣기","스팀우유 넣기","계량컵에 휘핑크림·제조 생크림 넣고 6~7회 섞어 커피 위에 올리기"]},
+{n:"아이스 아인슈페너 2023",c:"TES",cat:"커피",sizes:["R","L","M"],ing:[{m:"우유",R:140,L:190,M:220,u:"g"},{m:"얼음",R:100,L:160,M:170,u:"g"},{m:"에스프레소",R:2,L:3,M:4,u:"shot"},{m:"휘핑크림",R:30,L:35,M:35,u:"g"},{m:"제조 생크림",R:30,L:35,M:35,u:"g"}],
+ steps:["제공잔에 우유 넣고 얼음 넣기","에스프레소 넣기","계량컵에 휘핑크림·제조 생크림 넣고 6~7회 섞어 커피 위에 올리기"]},
+{n:"디카페인 오트화이트 카페라떼(HOT)",c:"OWL",cat:"커피",sizes:["R","L"],ing:[{m:"클래식 슈가시럽",R:2,L:2,u:"pump"},{m:"디카페인 에스프레소",R:2,L:3,u:"shot"},{m:"오트밀크 베이스(오틀리180/240·생크림45/60)",R:225,L:300,u:"g"},{m:"오트밀크 거품",R:15,L:20,u:"g"}],
+ steps:["제공잔에 슈가시럽 넣기","디카페인 에스프레소 넣고 젓기","스팀피처에 오트밀크 베이스 스티밍","스팀한 오트밀크 베이스 넣고 오트밀크 거품 넣기"]},
+{n:"아이스 디카페인 오트화이트 카페라떼",c:"OWL",cat:"커피",sizes:["R","L","M"],ing:[{m:"클래식 슈가시럽",R:1,L:2,M:2,u:"pump"},{m:"오트밀크 베이스(오틀리120/160/200·생크림30/40/50)",R:150,L:200,M:250,u:"g"},{m:"얼음",R:180,L:220,M:220,u:"g"},{m:"디카페인 에스프레소",R:2,L:3,M:4,u:"shot"}],
+ steps:["제공잔에 슈가시럽 넣기","오트밀크 베이스 넣고 젓기","얼음 넣기","디카페인 에스프레소 넣기"]},
+{n:"바나나 샷 라떼(HOT)",c:"BSL",cat:"커피",sizes:["R","L"],ing:[{m:"바나나파우더",R:30,L:35,u:"g"},{m:"온수",R:60,L:70,u:"g"},{m:"에스프레소",R:1,L:2,u:"shot"},{m:"스팀우유(X-hot)",R:200,L:260,u:"g"},{m:"우유거품",R:10,L:10,u:"g"}],
+ steps:["제공잔에 바나나 파우더 넣기","온수 넣고 젓기","에스프레소 넣기","스팀우유 넣고 젓기","우유거품 넣기"]},
+{n:"아이스 바나나 샷 라떼",c:"BSL",cat:"커피",sizes:["R","L"],ing:[{m:"바나나베이스(파우더30/40·온수30/40·우유150/200)",R:205,L:275,u:"g"},{m:"얼음",R:160,L:200,u:"g"},{m:"에스프레소",R:1,L:2,u:"shot"}],
+ steps:["계량컵에 바나나 파우더·온수 넣고 젓기","우유 넣기","제공잔에 바나나 베이스 '2' 넣기","얼음 넣기","에스프레소 넣기","※ 바나나 베이스 미제조 시 1번부터, 제조 시 3번부터 시작"]},
+{n:"바나나 샷 아메리카노(ICED)",c:"BSA",cat:"커피",sizes:["M"],ing:[{m:"헤이즐넛시럽",M:1,u:"pump"},{m:"정수물",M:90,u:"g"},{m:"에스프레소",M:2,u:"shot"},{m:"얼음",M:220,u:"g"},{m:"바나나베이스(파우더20·온수20·우유100)",M:135,u:"g"}],
+ steps:["계량컵에 바나나 파우더·온수 넣고 젓기","우유 넣기","제공잔에 헤이즐넛 시럽 넣기","정수물·에스프레소·얼음 넣기","바나나베이스 '2' 넣기"]},
+// ---- 커피 4 ----
+{n:"피넛 헤이즐넛 라떼(HOT)",c:"PHL",cat:"커피",sizes:["R","L"],ing:[{m:"헤이즐넛시럽",R:1,L:2,u:"pump"},{m:"피넛소스",R:60,L:70,u:"g"},{m:"리스트레또",R:2,L:3,u:"shot"},{m:"스팀우유(X-HOT)",R:"180(상단2.5cm)",L:"240(상단2.5cm)",u:"g"},{m:"우유거품",R:"20(상단1cm)",L:"20(상단1cm)",u:"g"}],
+ steps:["제공잔에 헤이즐넛시럽·피넛소스 넣기","리스트레또 넣고 젓기","스팀우유 넣기","우유거품 넣기"]},
+{n:"피넛 헤이즐넛 라떼(ICED)",c:"PHL",cat:"커피",sizes:["R","L","M"],ing:[{m:"헤이즐넛시럽",R:2,L:3,M:4,u:"pump"},{m:"우유",R:150,L:195,M:220,u:"g"},{m:"얼음",R:150,L:180,M:180,u:"g"},{m:"리스트레또",R:2,L:3,M:4,u:"shot"},{m:"피넛소스(상단에 고르게)",R:50,L:70,M:80,u:"g"}],
+ steps:["제공잔에 헤이즐넛시럽 넣기","우유 넣고 젓기","얼음 넣고 리스트레또 넣기","피넛소스 상단에 고르게 넣기"]},
+{n:"달고나 카페라떼(HOT)",c:"DCL",cat:"커피",sizes:["R","L"],ing:[{m:"달고나향시럽",R:20,L:30,u:"g"},{m:"클래식 슈가시럽",R:1,L:1,u:"pump"},{m:"스팀우유",R:"250(상단2.5cm)",L:"345(상단2.5cm)",u:"g"},{m:"우유거품",R:"15(상단1.5cm)",L:"15(상단1.5cm)",u:"g"},{m:"달고나크림",R:20,L:20,u:"g"},{m:"슈가크런치",R:10,L:10,u:"g"}],
+ steps:["제공잔에 달고나향시럽 넣기","슈가시럽 넣기","스팀우유 넣고 젓기","우유거품 넣기","달고나크림 올리기","슈가크런치 1cm 내외로 부수어 토핑"]},
+{n:"아이스 달고나 카페라떼",c:"DCL",cat:"커피",sizes:["R","L","M"],ing:[{m:"우유",R:170,L:220,M:250,u:"g"},{m:"얼음",R:160,L:210,M:230,u:"g"},{m:"달고나크림",R:50,L:60,M:70,u:"g"},{m:"슈가크런치",R:10,L:10,M:10,u:"g"}],
+ steps:["제공잔에 우유 넣기","얼음 넣기","달고나크림 올리기","슈가크런치 1cm 내외로 부수어 토핑"]},
+{n:"롱블랙(HOT·8온즈)",c:"LB",cat:"커피",sizes:["R"],ing:[{m:"온수",R:160,u:"g"},{m:"에스프레소",R:2,u:"shot"}],
+ steps:["제공잔에 온수 넣기","에스프레소 넣기"]},
+{n:"아이스 롱블랙(숏플라스틱컵)",c:"LB",cat:"커피",sizes:["R"],ing:[{m:"정수물",R:140,u:"g"},{m:"얼음",R:120,u:"g"},{m:"에스프레소",R:2,u:"shot"}],
+ steps:["제공잔에 정수물 넣기","얼음 넣기","에스프레소 넣기"]},
+{n:"숏라떼(HOT·8온즈)",c:"L",cat:"커피",sizes:["R"],ing:[{m:"에스프레소",R:2,u:"shot"},{m:"스팀우유",R:160,u:"g"},{m:"우유거품",R:10,u:"g"}],
+ steps:["제공잔에 에스프레소 넣기","스팀우유 넣기","우유거품 넣기"]},
+{n:"아이스 숏라떼(숏플라스틱컵)",c:"L",cat:"커피",sizes:["R"],ing:[{m:"우유",R:140,u:"g"},{m:"얼음",R:120,u:"g"},{m:"에스프레소",R:2,u:"shot"}],
+ steps:["제공잔에 우유 넣기","얼음 넣기","에스프레소 넣기"]},
+// ---- 콜드브루 ----
+{n:"콜드브루",c:"CB",cat:"콜드브루",sizes:["R","L","M"],ing:[{m:"콜드브루원액",R:100,L:130,M:160,u:"g"},{m:"정수물(포함 제조 윗선까지)",R:100,L:130,M:160,u:"g"},{m:"얼음",R:150,L:200,M:230,u:"g"}],
+ steps:["제공잔에 콜드브루 원액 넣기","정수물 넣기","얼음 넣기"]},
+{n:"콜드브루 라떼",c:"CBL",cat:"콜드브루",sizes:["R","L","M"],ing:[{m:"콜드브루원액",R:100,L:130,M:160,u:"g"},{m:"우유(포함 제조 윗선까지)",R:100,L:130,M:160,u:"g"},{m:"얼음",R:150,L:200,M:230,u:"g"}],
+ steps:["제공잔에 콜드브루 원액 넣기","우유 넣기","얼음 넣기"]},
+{n:"바닐라빈 콜드브루 라떼",c:"VCB",cat:"콜드브루",sizes:["R","L","M"],ing:[{m:"콜드브루원액",R:70,L:85,M:105,u:"g"},{m:"얼음",R:160,L:220,M:240,u:"g"},{m:"바닐라빈베이스",R:60,L:70,M:85,u:"g"},{m:"우유",R:120,L:145,M:175,u:"g"}],
+ steps:["블렌더 피처에 바닐라빈 베이스·우유 넣고 2번 버튼으로 블렌딩","제공잔에 콜드브루 원액 넣기","얼음 넣고 '1' 넣기"]},
+{n:"디카페인 콜드브루",c:"DCB",cat:"콜드브루",sizes:["R","L","M"],ing:[{m:"디카페인 콜드브루원액",R:70,L:90,M:110,u:"g"},{m:"정수물(제조 윗선까지)",R:130,L:170,M:210,u:"g"},{m:"얼음",R:190,L:240,M:250,u:"g"}],
+ steps:["제공잔에 디카페인 콜드브루 원액 넣기","정수물 제조 윗선까지 넣기","얼음 넣기"]},
+{n:"디카페인 오틀리 콜드브루",c:"DOC",cat:"콜드브루",sizes:["R","L","M"],ing:[{m:"디카페인 콜드브루원액",R:70,L:90,M:110,u:"g"},{m:"오틀리 오트드링크",R:140,L:180,M:220,u:"g"},{m:"얼음",R:180,L:230,M:240,u:"g"}],
+ steps:["제공잔에 디카페인 콜드브루 원액 넣기","오틀리 오트드링크 넣기","얼음 넣기"]},
+{n:"복숭아 아샷추",c:"PIS",cat:"콜드브루",sizes:["M"],ing:[{m:"정수물",M:200,u:"g"},{m:"복숭아 아이스티베이스",M:55,u:"g"},{m:"얼음",M:270,u:"g"},{m:"에스프레소",M:1,u:"shot"}],
+ steps:["제공잔에 정수물 넣기","복숭아 아이스티 베이스 넣기","얼음 넣기","에스프레소 넣기"]},
+{n:"애플 아샷추",c:"AET",cat:"콜드브루",sizes:["M"],ing:[{m:"정수물",M:200,u:"g"},{m:"애플 아이스티베이스",M:55,u:"g"},{m:"얼음",M:270,u:"g"},{m:"에스프레소",M:1,u:"shot"}],
+ steps:["제공잔에 정수물 넣기","애플 아이스티 베이스 넣기","얼음 넣기","에스프레소 넣기"]},
+{n:"민트 아샷추",c:"MET",cat:"콜드브루",sizes:["M"],ing:[{m:"정수물",M:200,u:"g"},{m:"민트 아이스티베이스",M:55,u:"g"},{m:"얼음",M:270,u:"g"},{m:"에스프레소",M:1,u:"shot"},{m:"애플민트",M:1,u:"ea"}],
+ steps:["제공잔에 정수물 넣기","민트 아이스티 베이스 넣기","얼음 넣기","에스프레소 넣기","애플민트 토핑"]},
+// ---- 티 1 ----
+{n:"TEA(HOT)",c:"TEA",cat:"티",sizes:["L"],ing:[{m:"온수",L:380,u:"g"},{m:"티백",L:1,u:"ea"}],
+ steps:["제공잔에 온수 넣고 티백 넣기"]},
+{n:"TEA(ICED)",c:"TEA",cat:"티",sizes:["L"],ing:[{m:"얼음①",L:200,u:"g"},{m:"온수",L:150,u:"g"},{m:"티백",L:1,u:"ea"},{m:"얼음②",L:100,u:"g"}],
+ steps:["계량컵에 온수·티백 넣고 4분 우리기","제공잔에 얼음① 넣고 '1' 넣기","얼음② 넣기"]},
+{n:"오렌지 자몽티(HOT)",c:"OGT",cat:"티",sizes:["R","L"],ing:[{m:"오렌지베이스",R:30,L:40,u:"g"},{m:"자몽농축액",R:35,L:45,u:"g"},{m:"클래식 슈가시럽",R:2,L:2,u:"pump"},{m:"온수",R:230,L:290,u:"g"},{m:"자몽웨지(1.5cm)",R:1,L:1,u:"ea"}],
+ steps:["제공잔에 오렌지 베이스 넣기","자몽 농축액 넣기","슈가시럽 넣기","온수 넣고 젓기","자몽 웨지 토핑"]},
+{n:"아이스 오렌지 자몽티",c:"OGT",cat:"티",sizes:["R","L"],ing:[{m:"오렌지베이스",R:25,L:40,u:"g"},{m:"자몽농축액",R:25,L:40,u:"g"},{m:"클래식 슈가시럽",R:1,L:2,u:"pump"},{m:"정수물",R:120,L:180,u:"g"},{m:"얼음",R:160,L:200,u:"g"},{m:"자몽웨지",R:1,L:1,u:"ea"}],
+ steps:["제공잔에 오렌지 베이스 넣기","자몽 농축액 넣기","슈가시럽 넣기","정수물 넣고 젓기","얼음 넣기","자몽 웨지 토핑"]},
+{n:"유자 레몬티(HOT)",c:"CLT",cat:"티",sizes:["R","L"],ing:[{m:"유자레몬베이스",R:60,L:80,u:"g"},{m:"레몬슬라이스(원형)",R:1,L:1,u:"ea"},{m:"온수",R:"265(상단1.5cm)",L:"340(상단1.5cm)",u:"g"}],
+ steps:["제공잔에 유자 레몬 베이스 넣기","레몬 원형 슬라이스 넣기","온수 넣고 젓기"]},
+{n:"유자 레몬티(ICED)",c:"CLT",cat:"티",sizes:["R","L"],ing:[{m:"유자레몬베이스",R:70,L:100,u:"g"},{m:"정수물(제조 윗선까지)",R:140,L:200,u:"g"},{m:"얼음",R:180,L:220,u:"g"},{m:"레몬슬라이스",R:1,L:1,u:"ea"}],
+ steps:["제공잔에 유자 레몬 베이스 넣기","정수물 넣고 젓기","얼음 넣기","레몬 원형 슬라이스 넣기"]},
+{n:"애플 민트티(HOT)",c:"AMT",cat:"티",sizes:["R"],ing:[{m:"애플시럽",R:30,u:"g"},{m:"클래식 슈가시럽",R:1,u:"pump"},{m:"TWG 그나와민트",R:1,u:"ea"},{m:"온수",R:270,u:"g"}],
+ steps:["제공잔에 애플 시럽 넣기","슈가 시럽 넣기","그나와 민트 티백 넣기","온수 넣고 저은 후 4분 우리기"]},
+{n:"아이스 애플 민트티",c:"AMT",cat:"티",sizes:["R"],ing:[{m:"애플시럽",R:30,u:"g"},{m:"클래식 슈가시럽",R:1,u:"pump"},{m:"나타드코코",R:40,u:"g"},{m:"애플민트①",R:2,u:"ea"},{m:"얼음",R:180,u:"g"},{m:"TWG 그나와민트",R:1,u:"ea"},{m:"온수",R:130,u:"g"},{m:"애플민트②",R:1,u:"ea"}],
+ steps:["계량컵에 그나와 민트 티백·온수 넣고 4분 우리기","제공잔에 애플시럽 넣기","슈가시럽 넣기","나타드 코코 넣기","애플민트① 넣고 얼음 넣기","'1' 넣고 젓기","애플민트② 장식"]},
+// ---- 티 2 ----
+{n:"허니 레몬티(HOT)",c:"HLT",cat:"티",sizes:["R"],ing:[{m:"사양벌꿀",R:15,u:"g"},{m:"클래식 슈가시럽",R:2,u:"pump"},{m:"레몬웨지(1/6분할)",R:"2(착즙10g)",u:"ea"},{m:"TWG 프렌치얼그레이",R:1,u:"ea"},{m:"온수",R:250,u:"g"}],
+ steps:["제공잔에 사양 벌꿀 넣기","슈가시럽 넣기","레몬 웨지 착즙한 뒤 넣기","프렌치 얼그레이 티백 넣기","온수 넣고 저은 후 4분 우리기"]},
+{n:"아이스 허니 레몬티",c:"HLT",cat:"티",sizes:["R"],ing:[{m:"레몬웨지(1/6분할)",R:"2(착즙10g)",u:"ea"},{m:"얼음",R:170,u:"g"},{m:"TWG 프렌치얼그레이",R:1,u:"ea"},{m:"온수",R:120,u:"g"},{m:"사양벌꿀",R:10,u:"g"},{m:"클래식 슈가시럽",R:2,u:"pump"},{m:"애플민트",R:1,u:"ea"}],
+ steps:["계량컵에 프렌치 얼그레이 티백·온수 넣고 4분 우리기","사양벌꿀·슈가시럽 넣고 젓기","제공잔에 레몬 웨지 착즙한 뒤 넣기","얼음 넣고 '2' 넣기","애플민트 장식"]},
+{n:"피치 블랙티(HOT)",c:"PBT",cat:"티",sizes:["R","L"],ing:[{m:"피치제조베이스",R:50,L:60,u:"g"},{m:"트리플피치시럽",R:10,L:15,u:"g"},{m:"우롱블랙티베이스",R:60,L:70,u:"g"},{m:"온수",R:220,L:280,u:"g"}],
+ steps:["제공잔에 피치 제조 베이스 넣기","트리플 피치 시럽 넣기","우롱 블랙티 베이스 넣기","온수 넣고 젓기"]},
+{n:"피치 블랙티(ICED)",c:"PBT",cat:"티",sizes:["R","L","M"],ing:[{m:"피치제조베이스",R:45,L:55,M:60,u:"g"},{m:"트리플피치시럽",R:10,L:15,M:15,u:"g"},{m:"정수물",R:120,L:150,M:160,u:"g"},{m:"우롱블랙티베이스",R:40,L:50,M:55,u:"g"},{m:"얼음",R:150,L:220,M:250,u:"g"},{m:"냉동천도복숭아",R:2,L:2,M:2,u:"ea"}],
+ steps:["제공잔에 피치 제조 베이스 넣기","트리플 피치 시럽 넣기","정수물 넣고 젓기","우롱 블랙티 베이스 넣기","얼음 넣기","냉동 천도 복숭아 정수물에 헹구어 토핑"]},
+{n:"아이스 버블 밀크티",c:"BMT",cat:"티",sizes:["R","L"],ing:[{m:"블랙티파우더",R:"25(1T2t)",L:"35(2T1t)",u:"g"},{m:"온수",R:15,L:20,u:"g"},{m:"우유(포함 제조 윗선까지)",R:165,L:230,u:"g"},{m:"얼음",R:170,L:200,u:"g"},{m:"타피오카펄",R:1,L:1,u:"ea"}],
+ steps:["제공잔에 블랙티 파우더 넣기","온수 넣고 젓기","우유 넣기","얼음 넣기","타피오카 펄 넣기"]},
+{n:"로얄 밀크티(HOT)",c:"RM",cat:"티",sizes:["R","L"],ing:[{m:"잉글리쉬브렉퍼스트(3~4분)",R:1,L:1,u:"ea"},{m:"스팀우유(티백 우리기용)",R:150,L:150,u:"g"},{m:"블랙티파우더",R:"15(1T)",L:"20(1T1t)",u:"g"},{m:"스팀우유",R:"150(상단1.5cm)",L:"250(상단1.5cm)",u:"g"},{m:"우유거품",R:"10(상단0.5cm)",L:"10(상단0.5cm)",u:"g"}],
+ steps:["계량컵에 ※잉글리쉬 브렉퍼스트 티백 넣고 스팀우유 넣어 우리기","제공잔에 우린 티 넣고 블랙티 파우더 넣고 젓기","스팀우유 넣기","우유거품 넣고 티백 넣기","※T-BRISE 티백 사용"]},
+{n:"아이스 로얄 밀크티",c:"RM",cat:"티",sizes:["R","L"],ing:[{m:"잉글리쉬브렉퍼스트(3~4분)",R:1,L:1,u:"ea"},{m:"스팀우유(티백 우리기용)",R:150,L:150,u:"g"},{m:"블랙티파우더",R:"20(1T1t)",L:"25(1T2t)",u:"g"},{m:"우유(포함 제조 윗선까지)",R:30,L:110,u:"g"},{m:"얼음",R:170,L:210,u:"g"}],
+ steps:["계량컵에 ※잉글리쉬 브렉퍼스트 티백 넣고 스팀우유 넣어 우리기","제공잔에 우린 티 넣고 블랙티 파우더 넣고 젓기","우유 넣기","얼음 넣고 티백 넣기","※T-BRISE 티백 사용"]},
+// ---- 티 3 ----
+{n:"그린티 라떼(HOT)",c:"GL",cat:"티",sizes:["R","L"],ing:[{m:"그린티파우더",R:"30(2T)",L:"40(2T2t)",u:"g"},{m:"스팀우유",R:"310(상단1.5cm)",L:"380(상단1.5cm)",u:"g"},{m:"우유거품",R:"10(상단0.5cm)",L:"10(상단0.5cm)",u:"g"}],
+ steps:["제공잔에 그린티 파우더 넣기","스팀우유 1/3 넣고 젓기","스팀우유 넣고 우유거품 넣기"]},
+{n:"아이스 그린티 라떼",c:"GL",cat:"티",sizes:["R","L","M"],ing:[{m:"그린티파우더",R:"30(2T)",L:"40(2T2t)",M:"50(3T1t)",u:"g"},{m:"온수",R:15,L:20,M:25,u:"g"},{m:"우유(포함 제조 윗선까지)",R:160,L:230,M:260,u:"g"},{m:"얼음",R:170,L:200,M:240,u:"g"}],
+ steps:["제공잔에 그린티 파우더 넣기","온수 넣고 젓기","우유 넣기","얼음 넣기"]},
+{n:"복숭아 아이스티",c:"PI",cat:"티",sizes:["M"],ing:[{m:"정수물",M:200,u:"g"},{m:"복숭아 아이스티베이스",M:55,u:"g"},{m:"얼음",M:300,u:"g"}],
+ steps:["제공잔에 정수물 넣기","복숭아 아이스티 베이스 넣기","얼음 넣기"]},
+{n:"애플 아이스티",c:"AIT",cat:"티",sizes:["M"],ing:[{m:"정수물",M:200,u:"g"},{m:"애플 아이스티베이스",M:55,u:"g"},{m:"얼음",M:300,u:"g"}],
+ steps:["제공잔에 정수물 넣기","애플 아이스티 베이스 넣기","얼음 넣기"]},
+{n:"민트 아이스티",c:"MIT",cat:"티",sizes:["M"],ing:[{m:"정수물",M:200,u:"g"},{m:"민트 아이스티베이스",M:55,u:"g"},{m:"얼음",M:300,u:"g"},{m:"애플민트",M:1,u:"ea"}],
+ steps:["제공잔에 정수물 넣기","민트 아이스티 베이스 넣기","얼음 넣기","애플민트 토핑"]},
+{n:"우유(HOT)",c:"",cat:"티",sizes:["R"],ing:[{m:"스팀우유",R:280,u:"g"},{m:"우유거품",R:20,u:"g"}],
+ steps:["제공잔에 스팀우유 넣기","우유거품 넣기"]},
+{n:"우유(ICED)",c:"",cat:"티",sizes:["R"],ing:[{m:"우유",R:330,u:"g"}],
+ steps:["제공잔에 우유 넣기"]},
+// ---- 블렌디드 1 ----
+{n:"키위 바나나 주스",c:"KBJ",cat:"블렌디드",sizes:["L"],ing:[{m:"키위",L:150,u:"g"},{m:"바나나",L:60,u:"g"},{m:"얼음①",L:50,u:"g"},{m:"정수물",L:60,u:"g"},{m:"클래식 슈가시럽",L:2,u:"pump"},{m:"얼음②",L:170,u:"g"}],
+ steps:["블렌더 피처에 키위·바나나·얼음·정수물·슈가시럽 넣고 4번 버튼으로 블렌딩","제공잔에 '1' 담기","얼음 넣기"]},
+{n:"오렌지 자몽 주스",c:"OGJ",cat:"블렌디드",sizes:["L"],ing:[{m:"자몽농축액",L:45,u:"g"},{m:"얼음",L:150,u:"g"},{m:"오렌지",L:150,u:"g"},{m:"정수물",L:120,u:"g"}],
+ steps:["블렌더 피처에 오렌지·정수물 넣고 2번 버튼으로 블렌딩","제공잔에 자몽농축액 넣기","얼음 넣기","'1' 담기"]},
+{n:"요거트 프라페",c:"YF",cat:"블렌디드",sizes:["R","L","M"],ing:[{m:"레몬주스",R:10,L:15,M:20,u:"g"},{m:"TS 요거트파우더",R:"50(3T1t)",L:"70(4T2t)",M:"90(6T)",u:"g"},{m:"우유",R:"130(6oz)",L:"170(8oz)",M:"200(10oz)",u:"g"},{m:"얼음",R:200,L:250,M:310,u:"g"}],
+ steps:["블렌더 피처에 레몬주스·요거트파우더·우유·얼음 넣고 3번 버튼으로 블렌딩"]},
+{n:"민트 초코 프라페",c:"MCF",cat:"블렌디드",sizes:["R","L","M"],ing:[{m:"TS 밀크연유베이스",R:140,L:185,M:200,u:"g"},{m:"민트초코파우더",R:"40(3T1t)",L:"55(4T1t)",M:"70(6T)",u:"g"},{m:"얼음",R:200,L:260,M:300,u:"g"},{m:"민트초코오레오",R:"1(½x2ea)",L:1,M:1,u:"ea"}],
+ steps:["블렌더 피처에 밀크연유베이스·민트초코파우더·얼음 넣고 3번 버튼으로 블렌딩","제공잔에 '1' 담고 민트초코오레오 토핑"]},
+{n:"스트로베리 피치 프라페",c:"SPF",cat:"블렌디드",sizes:["R","L"],ing:[{m:"복숭아베이스",R:130,L:180,u:"g"},{m:"얼음",R:220,L:300,u:"g"},{m:"딸기베이스",R:60,L:80,u:"g"},{m:"산딸기냉동퓨레",R:15,L:20,u:"g"}],
+ steps:["블렌더 피처에 복숭아베이스·얼음 넣고 3번 버튼으로 블렌딩","제공잔에 '1'을 제조 윗선까지 담기","블렌더에 딸기베이스·산딸기 냉동퓨레 넣고 3번 버튼으로 블렌딩","제공잔에 '3' 투톤으로 담기"]},
+{n:"애플망고 주스",c:"AMJ",cat:"블렌디드",sizes:["R","L","M"],ing:[{m:"정수물",R:140,L:200,M:220,u:"g"},{m:"냉동애플망고",R:110,L:150,M:170,u:"g"},{m:"망고패션농축액",R:70,L:90,M:95,u:"g"},{m:"클래식 슈가시럽",R:3,L:4,M:5,u:"pump"},{m:"얼음",R:60,L:70,M:80,u:"g"},{m:"냉동애플망고(토핑)",R:3,L:4,M:4,u:"ea"},{m:"애플민트",R:1,L:1,M:1,u:"ea"}],
+ steps:["블렌더 피처에 정수물·냉동애플망고·망고패션농축액·슈가시럽·얼음 넣고 1번 버튼으로 블렌딩","제공잔에 '1'담기","냉동 애플망고 토핑","애플민트 장식"]},
+{n:"제주 한라봉 주스",c:"JHJ",cat:"블렌디드",sizes:["R","L","M"],ing:[{m:"정수물",R:120,L:140,M:150,u:"g"},{m:"냉동한라봉",R:50,L:100,M:150,u:"g"},{m:"한라봉퓨레",R:80,L:90,M:100,u:"g"},{m:"얼음①",R:50,L:50,M:50,u:"g"},{m:"얼음②",R:90,L:110,M:130,u:"g"},{m:"애플민트",R:1,L:1,M:1,u:"ea"}],
+ steps:["블렌더 피처에 정수물·냉동한라봉·한라봉퓨레 넣고 2번 버튼으로 블렌딩","제공잔에 '1' 담기","얼음 넣기","애플민트 장식"]},
+// ---- 블렌디드 2 ----
+{n:"바닐라 밀크 쉐이크",c:"VMS",cat:"블렌디드",sizes:["R","L","M"],ing:[{m:"쉐이크베이스",R:200,L:230,M:250,u:"g"},{m:"바닐라시럽",R:1,L:2,M:3,u:"pump"},{m:"얼음",R:200,L:260,M:300,u:"g"}],
+ steps:["블렌더 피처에 쉐이크베이스·바닐라시럽·얼음 넣고 3번 버튼으로 블렌딩"]},
+{n:"쿠키 쉐이크",c:"CMS",cat:"블렌디드",sizes:["R","L","M"],ing:[{m:"쉐이크베이스",R:170,L:210,M:240,u:"g"},{m:"얼음",R:200,L:250,M:290,u:"g"},{m:"오레오(블렌딩)",R:3,L:4,M:5,u:"ea"},{m:"오레오(토핑-부순것)",R:"1(10g)",L:1,M:1,u:"ea"},{m:"오레오(토핑)",R:1,L:1,M:1,u:"ea"}],
+ steps:["블렌더 피처에 쉐이크베이스·얼음 넣고 3번 버튼으로 블렌딩","블렌더 피처에 오레오 추가로 넣고 4번 버튼으로 5초간 블렌딩","제공잔에 '2'담고 오레오 2회 토핑(1개 부숴서, 1개 통째로)"]},
+{n:"밀크티 쉐이크",c:"IMS",cat:"블렌디드",sizes:["R","L","M"],ing:[{m:"쉐이크베이스",R:80,L:100,M:120,u:"g"},{m:"우유",R:80,L:100,M:120,u:"g"},{m:"블랙티파우더",R:30,L:35,M:40,u:"g"},{m:"얼음",R:210,L:250,M:290,u:"g"},{m:"휘핑크림",R:20,L:20,M:20,u:"g"},{m:"블랙티파우더(토핑)",R:0.05,L:0.05,M:0.05,u:"g"}],
+ steps:["블렌더 피처에 쉐이크베이스·우유·블랙티파우더·얼음 넣고 3번 버튼으로 블렌딩","제공잔에 '1' 담고 휘핑크림 올리기","블랙티파우더 토핑"]},
+{n:"커피 쿠키 프라페",c:"CCP",cat:"블렌디드",sizes:["R","L","M"],ing:[{m:"카라멜쿠키크런치",R:5,L:6,M:7,u:"g"},{m:"에스프레소",R:2,L:3,M:3,u:"shot"},{m:"연유",R:30,L:35,M:40,u:"g"},{m:"클래식 슈가시럽",R:1,L:2,M:2,u:"pump"},{m:"바닐라빈파우더",R:25,L:30,M:35,u:"g"},{m:"얼음",R:220,L:265,M:300,u:"g"},{m:"휘핑크림",R:15,L:20,M:20,u:"g"},{m:"카라멜쿠키크런치(토핑)",R:5,L:6,M:7,u:"g"},{m:"로투스쿠키",R:1,L:1,M:1,u:"ea"}],
+ steps:["블렌더 피처에 에스프레소·연유·슈가시럽·바닐라빈파우더·얼음 넣고 3번 버튼으로 블렌딩","제공잔에 카라멜 쿠키 크런치 넣기","제공잔에 '1' 담고 휘핑크림 올리기","상단에 카라멜 쿠키 크런치 토핑","로투스 쿠키 중앙에 세워서 토핑"]},
+{n:"애플망고 피치 프라페",c:"AMP",cat:"블렌디드",sizes:["R","L","M"],ing:[{m:"냉동산딸기퓨레",R:5,L:7,M:8,u:"g"},{m:"복숭아베이스",R:120,L:140,M:160,u:"g"},{m:"망고패션농축액",R:35,L:40,M:50,u:"g"},{m:"냉동애플망고",R:50,L:60,M:65,u:"g"},{m:"정수물",R:40,L:45,M:55,u:"g"},{m:"얼음",R:190,L:225,M:255,u:"g"},{m:"냉동천도복숭아",R:2,L:2,M:2,u:"ea"}],
+ steps:["블렌더 피처에 복숭아베이스·망고패션농축액·냉동애플망고·얼음 넣고 3번 버튼으로 블렌딩","제공잔에 해동된 산딸기퓨레 넣기","제공잔에 '1' 담고 하단 2~3회 젓기","냉동 천도복숭아 정수물에 헹구어 토핑"]},
+// ---- 에이드 ----
+{n:"허니 레몬 에이드",c:"HDC",cat:"에이드",sizes:["L","M"],ing:[{m:"허니레몬베이스",L:70,M:80,u:"g"},{m:"클래식 슈가시럽",L:2,M:2,u:"pump"},{m:"얼음",L:220,M:240,u:"g"},{m:"탄산수",L:180,M:200,u:"g"},{m:"레몬웨지(1/6분할)",L:"2(착즙10g)",M:2,u:"ea"},{m:"애플민트",L:1,M:1,u:"ea"}],
+ steps:["제공잔에 허니레몬베이스·슈가시럽 넣기","얼음 넣기","탄산수 넣기","레몬 웨지 착즙한 뒤 한 개는 컵 중앙, 한 개는 상단에 토핑","애플민트 장식"]},
+{n:"자몽 에이드",c:"GA",cat:"에이드",sizes:["L","M"],ing:[{m:"자몽농축액",L:50,M:60,u:"g"},{m:"클래식 슈가시럽",L:2,M:3,u:"g"},{m:"얼음",L:200,M:250,u:"g"},{m:"탄산수",L:150,M:170,u:"g"},{m:"자몽웨지(1.5cm)",L:1,M:1,u:"ea"},{m:"애플민트",L:1,M:1,u:"ea"}],
+ steps:["제공잔에 자몽농축액·슈가시럽 넣기","얼음 넣기","탄산수 넣기","자몽 웨지 토핑","애플민트 장식"]},
+{n:"오렌지 에이드",c:"OA",cat:"에이드",sizes:["L","M"],ing:[{m:"오렌지베이스",L:60,M:70,u:"g"},{m:"얼음",L:220,M:260,u:"g"},{m:"탄산수",L:180,M:200,u:"g"},{m:"오렌지슬라이스(반달)",L:1,M:1,u:"ea"},{m:"애플민트",L:1,M:1,u:"ea"}],
+ steps:["제공잔에 오렌지베이스 넣기","얼음 넣기","탄산수 넣기","오렌지 반달 슬라이스 토핑","애플민트 장식"]},
+{n:"복숭아 에이드",c:"PA",cat:"에이드",sizes:["L","M"],ing:[{m:"냉동산딸기퓨레",L:5,M:6,u:"g"},{m:"피치제조베이스",L:110,M:130,u:"g"},{m:"클래식 슈가시럽",L:3,M:4,u:"pump"},{m:"얼음",L:200,M:220,u:"g"},{m:"탄산수",L:130,M:150,u:"g"},{m:"냉동천도복숭아",L:4,M:4,u:"ea"},{m:"애플민트",L:1,M:1,u:"ea"}],
+ steps:["제공잔에 산딸기냉동퓨레 넣기","피치제조베이스·슈가시럽 넣기","얼음 넣기","탄산수 넣기","냉동 천도복숭아 정수물에 헹구어 토핑","애플민트 장식"]},
+{n:"샤인머스캣 청포도에이드",c:"SGA",cat:"에이드",sizes:["L","M"],ing:[{m:"샤인머스캣베이스",L:60,M:75,u:"g"},{m:"나타드코코",L:"40(2T)",M:"50(2T1t)",u:"g"},{m:"얼음①",L:120,M:120,u:"g"},{m:"청포도(1/2분할)",L:4,M:4,u:"ea"},{m:"애플민트①",L:3,M:3,u:"ea"},{m:"얼음②",L:100,M:100,u:"g"},{m:"탄산수",L:160,M:200,u:"g"},{m:"청포도②",L:2,M:2,u:"ea"},{m:"애플민트②",L:1,M:1,u:"ea"}],
+ steps:["제공잔에 샤인머스캣베이스 넣기","나타드코코·얼음① 넣기","청포도와 애플민트① 가장자리에 넣기","얼음② 넣기","탄산수 넣기","청포도와 애플민트② 장식"]},
+// ---- 드링크 ----
+{n:"초콜릿 라떼(HOT)",c:"CCL",cat:"드링크",sizes:["R","L"],ing:[{m:"초콜릿파우더",R:"40(4T)",L:"55(5T1t)",u:"g"},{m:"스팀우유",R:240,L:320,u:"g"},{m:"휘핑크림",R:30,L:30,u:"g"},{m:"초콜릿칩",R:10,L:10,u:"ea"}],
+ steps:["제공잔에 초콜릿파우더 넣기","스팀우유 1/3 넣고 젓기","나머지 스팀우유 넣고 젓기","휘핑크림 올리고 초콜릿칩 토핑 (제외 시 우유거품 상단1cm까지)"]},
+{n:"아이스 초콜릿 라떼",c:"CCL",cat:"드링크",sizes:["R","L","M"],ing:[{m:"초콜릿파우더",R:"40(4T)",L:"50(5T)",M:"60(6T)",u:"g"},{m:"온수",R:20,L:30,M:40,u:"g"},{m:"우유",R:140,L:200,M:230,u:"g"},{m:"얼음",R:150,L:200,M:210,u:"g"},{m:"휘핑크림",R:25,L:30,M:30,u:"g"},{m:"초콜릿칩",R:10,L:10,M:10,u:"ea"}],
+ steps:["제공잔에 초콜릿파우더 넣기","온수 넣고 젓기","우유 넣기","얼음 넣기","휘핑크림 올리기","초콜릿칩 토핑"]},
+{n:"고구마 라떼(HOT)",c:"RSL",cat:"드링크",sizes:["R","L"],ing:[{m:"고구마페이스트",R:80,L:100,u:"g"},{m:"스팀우유(X-HOT)",R:210,L:280,u:"g"},{m:"우유거품",R:30,L:30,u:"g"},{m:"고구마칩",R:2,L:2,u:"g"}],
+ steps:["제공잔에 고구마페이스트 넣기","스팀우유 넣고 젓기","우유거품 넣기","고구마칩 부수어 토핑"]},
+{n:"아이스 고구마 라떼",c:"RSL",cat:"드링크",sizes:["R","L"],ing:[{m:"고구마페이스트",R:80,L:100,u:"g"},{m:"우유",R:180,L:230,u:"g"},{m:"얼음",R:130,L:160,u:"g"}],
+ steps:["제공잔에 고구마페이스트 넣기","우유 넣고 젓기","얼음 넣기"]},
+{n:"블루베리 요거트 드링크",c:"BY",cat:"드링크",sizes:["R","L","M"],ing:[{m:"요거트베이스(플레인요거트+우유)",R:240,L:330,M:370,u:"g"},{m:"블루베리 리플잼",R:40,L:50,M:60,u:"g"},{m:"얼음",R:100,L:130,M:150,u:"g"}],
+ steps:["제공잔에 플레인요거트 넣기","우유 넣고 젓기","블루베리 리플잼 넣고 젓기","얼음 넣기"]},
+{n:"딸기 연유 라떼",c:"SCL",cat:"드링크",sizes:["R","L","M"],ing:[{m:"딸기연유라떼베이스",R:255,L:335,M:380,u:"g"},{m:"얼음",R:170,L:200,M:220,u:"g"}],
+ steps:["제공잔에 밀크연유베이스·우유·딸기베이스·산딸기냉동퓨레 넣고 젓기","얼음 넣기"]},
+{n:"딸기 요거트 라떼",c:"SYL",cat:"드링크",sizes:["R","L","M"],ing:[{m:"요거트베이스",R:210,L:270,M:310,u:"g"},{m:"얼음",R:110,L:150,M:160,u:"g"},{m:"딸기베이스",R:80,L:100,M:120,u:"g"}],
+ steps:["제공잔에 플레인요거트 넣기","우유 넣고 젓기","얼음 넣기","딸기베이스 가장자리로 천천히 넣기"]},
+// ---- 전통 음료 ----
+{n:"우리쌀 식혜",c:"RS",cat:"전통음료",sizes:["L","M"],ing:[{m:"식혜베이스",L:85,M:95,u:"g"},{m:"정수물(제조윗선까지)",L:205,M:230,u:"g"},{m:"얼음",L:240,M:260,u:"g"},{m:"대추칩",L:3,M:3,u:"g"}],
+ steps:["제공잔에 식혜베이스 넣기","정수물 제조윗선까지 넣기","얼음 넣고 대추칩 토핑"]},
+{n:"우리 대추 수정과(HOT)",c:"JS",cat:"전통음료",sizes:["L"],ing:[{m:"수정과베이스",L:105,u:"g"},{m:"온수",L:340,u:"g"},{m:"대추칩",L:3,u:"g"}],
+ steps:["제공잔에 수정과베이스 넣기","온수를 상단 1.5cm까지 넣고 잘 섞이도록 젓기","대추칩 토핑"]},
+{n:"우리 대추 수정과(ICED)",c:"JS",cat:"전통음료",sizes:["L","M"],ing:[{m:"정수물",L:130,M:140,u:"g"},{m:"얼음",L:300,M:330,u:"g"},{m:"수정과베이스",L:110,M:120,u:"g"},{m:"대추칩",L:3,M:3,u:"g"}],
+ steps:["블렌더 피처에 정수물과 얼음 넣고 4번으로 블렌딩","제공잔에 '1'담고 젓기","수정과베이스 천천히 넣고 젓기","대추칩 토핑"]},
+{n:"미숫가루 라떼",c:"ML",cat:"전통음료",sizes:["R","L","M"],ing:[{m:"정수물",R:160,L:220,M:240,u:"g"},{m:"미숫가루파우더",R:55,L:70,M:80,u:"g"},{m:"클래식 슈가시럽",R:1,L:1,M:1,u:"pump"},{m:"얼음",R:140,L:180,M:200,u:"g"},{m:"미숫가루크림",R:60,L:75,M:85,u:"g"},{m:"미숫가루파우더(토핑)",R:1,L:1,M:1,u:"g"}],
+ steps:["블렌더 피처에 정수물·미숫가루파우더·슈가시럽 넣고 2번 버튼으로 블렌딩","제공잔에 '1' 담기","얼음 넣기","미숫가루크림 올리기","미숫가루파우더 반달모양으로 토핑"]},
+{n:"유자 생강차(ICED)",c:"CGT",cat:"전통음료",sizes:["R","L","M"],ing:[{m:"꿀생강차",R:45,L:60,M:65,u:"g"},{m:"유자레몬베이스",R:30,L:40,M:45,u:"g"},{m:"정수물(제조윗선까지)",R:140,L:190,M:220,u:"g"},{m:"얼음",R:190,L:230,M:260,u:"g"},{m:"대추칩",R:3,L:3,M:3,u:"g"}],
+ steps:["제공잔에 꿀생강차·유자레몬베이스 넣기","정수물 제조 윗선까지 넣고 젓기","얼음 넣기","대추칩 중앙에 토핑"]},
+{n:"유자 생강차(HOT)",c:"CGT",cat:"전통음료",sizes:["R","L"],ing:[{m:"꿀생강차",R:45,L:60,u:"g"},{m:"유자레몬베이스",R:30,L:40,u:"g"},{m:"온수",R:270,L:350,u:"g"},{m:"대추칩",R:3,L:3,u:"g"}],
+ steps:["제공잔에 꿀생강차·유자레몬베이스 넣기","온수 컵 상단 1.5cm까지 넣고 젓기","대추칩 중앙에 토핑"]},
+// ---- 아이스크림/고객요청 ----
+{n:"요거트 아이스크림(컵)",c:"",cat:"아이스크림",sizes:["R"],ing:[{m:"요거트아이스크림",R:110,u:"g"}],
+ steps:["전용컵에 요거트 아이스크림 담기"]},
+{n:"요거트 아이스크림(콘)",c:"",cat:"아이스크림",sizes:["R"],ing:[{m:"와플콘",R:1,u:"ea"},{m:"요거트아이스크림",R:110,u:"g"}],
+ steps:["와플콘에 전용 깍지 끼우기","요거트 아이스크림 담기"]},
+{n:"초코 요거트 아이스크림(컵)",c:"",cat:"아이스크림",sizes:["R"],ing:[{m:"요거트아이스크림",R:110,u:"g"},{m:"초코쉘",R:10,u:"g"}],
+ steps:["전용컵에 요거트 아이스크림 담기","초코쉘 뿌리기"]},
+{n:"초코 요거트 아이스크림(콘)",c:"",cat:"아이스크림",sizes:["R"],ing:[{m:"와플콘",R:1,u:"ea"},{m:"요거트아이스크림",R:110,u:"g"},{m:"초코쉘",R:10,u:"g"}],
+ steps:["와플콘에 전용 깍지 끼우기","요거트 아이스크림 담기","초코쉘 뿌리기"]},
+{n:"초코 쿠키 요거트 아이스크림(숏플라스틱컵)",c:"CCY",cat:"아이스크림",sizes:["R"],ing:[{m:"초코첵스",R:14,u:"g"},{m:"요거트아이스크림",R:180,u:"g"},{m:"초코쉘",R:20,u:"g"},{m:"초코첵스(토핑)",R:1,u:"g"}],
+ steps:["제공잔에 초코첵스 넣기","아이스크림 담기","초코쉘 뿌리기","초코첵스 오른쪽에 토핑"]},
+{n:"바닐라 아포가토",c:"VA",cat:"아이스크림",sizes:["R"],ing:[{m:"아포가토용아이스크림",R:130,u:"g"},{m:"초콜릿소스",R:3,u:"g"},{m:"코코아파우더",R:0.5,u:"g"},{m:"쇼트용밀크초코사인판",R:1,u:"ea"},{m:"에스프레소",R:1,u:"shot"}],
+ steps:["전용컵에 아포가토용 아이스크림 넣기","초콜릿소스 지그재그 5회 드리즐","코코아파우더 뿌리기","초코 사인판 토핑","에스프레소는 샷글라스에 담아 제공"]},
+// ---- 신제품 5월 ----
+{n:"우리 팥 빙수",c:"",cat:"시즌(5월)",sizes:["단일"],ing:[{m:"밀크아이스블록",단일:1,u:"ea"},{m:"연유①",단일:10,u:"g"},{m:"통팥①",단일:40,u:"g"},{m:"연유②",단일:10,u:"g"},{m:"통팥②",단일:80,u:"g"},{m:"인절미",단일:5,u:"g"},{m:"TS밀크연유베이스(제공)",단일:25,u:"g"}],
+ steps:["용기에 밀크얼음 1/2 빙삭","연유① 드리즐 후 통팥① 올리기","나머지 얼음 모두 빙삭","연유② 드리즐","통팥② 올리기","인절미 토핑","밀크 연유 베이스 함께 제공"]},
+{n:"애플 망고 빙수",c:"",cat:"시즌(5월)",sizes:["단일"],ing:[{m:"망고아이스블록",단일:1,u:"ea"},{m:"냉동애플망고",단일:210,u:"g"},{m:"망고패션농축액",단일:40,u:"g"},{m:"애플민트",단일:2,u:"ea"},{m:"망고패션농축액(제공)",단일:25,u:"g"}],
+ steps:["계량컵에 냉동애플망고·망고패션농축액 넣고 버무려 준비","용기 왼쪽에 망고얼음 모두 빙삭","용기 오른쪽에 '1' 망고토핑 올리기","애플민트 망고토핑 상·하단에 토핑","망고 패션 농축액 함께 제공"]},
+{n:"우리 홍시 빙수",c:"",cat:"시즌(5월)",sizes:["단일"],ing:[{m:"밀크아이스블록",단일:1,u:"ea"},{m:"홍시베이스",단일:25,u:"g"},{m:"감말랭이",단일:30,u:"g"},{m:"냉동컷팅홍시",단일:"180(8~9ea)",u:"g"},{m:"클래식 슈가시럽",단일:2,u:"pump"},{m:"애플민트",단일:2,u:"ea"},{m:"홍시베이스(제공)",단일:25,u:"g"}],
+ steps:["계량컵에 냉동 컷팅 홍시·슈가시럽 넣고 버무려 준비","용기 왼쪽 바닥에 홍시베이스 드리즐","밀크얼음 1/2 빙삭","감말랭이 올리기","나머지 얼음 모두 빙삭","용기 오른쪽에 '1' 홍시토핑 올리기","애플민트 홍시토핑 상·하단에 토핑","홍시 베이스 함께 제공"]},
+{n:"과일 요거트 아이스크림",c:"",cat:"시즌(5월)",sizes:["단일"],ing:[{m:"초코첵스①(하단)",단일:10,u:"g"},{m:"요거트아이스크림",단일:320,u:"g"},{m:"초코첵스②(가장자리)",단일:15,u:"g"},{m:"초코첵스③(상단)",단일:5,u:"g"},{m:"냉동애플망고",단일:70,u:"g"},{m:"클래식 슈가시럽",단일:1,u:"pump"},{m:"바나나",단일:"60(1ea/6분할)",u:"g"},{m:"청포도",단일:"60(8ea)",u:"g"}],
+ steps:["바나나 6등분 커팅하여 준비","계량컵에 냉동애플망고·슈가시럽 넣고 버무려 준비","용기 바닥에 초코첵스① 넣기","중앙에 요거트 아이스크림 7바퀴 짜기","가장자리에 초코첵스② 넣기","상단 한쪽방향으로 초코첵스③ 넣기","초코첵스 아래에 망고토핑'2' 넣기","망고토핑 아래에 바나나'1' 넣기","바나나 아래에 청포도 넣기"]},
+{n:"미키 망고 요거트 프라페",c:"MMY",cat:"시즌(5월)",sizes:["R","L","M"],ing:[{m:"요거트베이스",R:70,L:85,M:100,u:"g"},{m:"망고패션농축액",R:45,L:55,M:65,u:"g"},{m:"냉동애플망고",R:80,L:95,M:115,u:"g"},{m:"클래식 슈가시럽",R:3,L:4,M:4,u:"pump"},{m:"정수물",R:60,L:75,M:85,u:"g"},{m:"얼음",R:130,L:170,M:185,u:"g"},{m:"미키베리아이스토핑",R:1,L:1,M:1,u:"ea"}],
+ steps:["블렌더 피처에 망고패션농축액·냉동애플망고·슈가시럽·정수물·얼음 넣고 3번 버튼으로 블렌딩","제공잔에 요거트베이스 넣기","제공잔에 '1' 가장자리 채우며 담기","미키 베리 아이스 토핑 상단에 토핑"]},
+// ---- 신제품 6월 ----
+{n:"수박 주스",c:"WJ",cat:"시즌(6월)",sizes:["R","L","M"],ing:[{m:"주스용수박(씨 전부 제거)",R:180,L:240,M:300,u:"g"},{m:"클래식 슈가시럽",R:3,L:4,M:5,u:"pump"},{m:"얼음",R:140,L:170,M:200,u:"g"},{m:"토핑용수박(2.5cm입방체)",R:"3(45g)",L:"4(60g)",M:"4(60g)",u:"ea"}],
+ steps:["블렌더 피처에 수박·슈가시럽·얼음 넣고 1번 버튼으로 블렌딩","제공잔에 '1'담기","수박 토핑(2.5cm 입방체)"]},
+{n:"복숭아 주스",c:"PJ",cat:"시즌(6월)",sizes:["R","L","M"],ing:[{m:"복숭아베이스",R:90,L:110,M:140,u:"g"},{m:"레몬주스",R:10,L:15,M:15,u:"g"},{m:"정수물",R:120,L:150,M:180,u:"g"},{m:"냉동천도복숭아",R:120,L:150,M:180,u:"g"},{m:"얼음",R:70,L:120,M:120,u:"g"},{m:"로즈마리(토핑,5cm)",R:1,L:1,M:1,u:"ea"}],
+ steps:["블렌더 피처에 복숭아베이스·레몬주스·정수물·냉동천도복숭아 넣고 3번 버튼으로 블렌딩","제공잔에 '1' 담기","얼음 넣고 로즈마리 토핑"]},
+{n:"우리 수박 화채",c:"WH",cat:"시즌(6월)",sizes:["M"],ing:[{m:"클래식 슈가시럽",M:5,u:"pump"},{m:"TS밀크연유베이스",M:80,u:"g"},{m:"딸기베이스",M:30,u:"g"},{m:"나타드코코",M:"20(1T)",u:"g"},{m:"후르츠칵테일(과육)",M:50,u:"g"},{m:"토핑용수박①",M:"120(8ea)",u:"g"},{m:"얼음",M:80,u:"g"},{m:"탄산수",M:150,u:"g"},{m:"토핑용수박②",M:"45(3ea)",u:"g"}],
+ steps:["제공잔에 슈가시럽·밀크연유베이스·딸기베이스 넣기","나타드코코·액체 제거한 후르츠칵테일·토핑용수박 넣기","얼음·탄산수 넣기","하단까지 잘 섞이도록 젓기","토핑용 수박 토핑"]},
+];
+
+const CUSTOM_OPTIONS = [
+["시럽(바닐라/헤이즐넛/카라멜)","HOT R:3 L:4 · ICED R:3 L:4 M:5 (pump)"],
+["휘핑크림","HOT 30g · ICED R:25 L:30 M:30 (g)"],
+["우유 변경(무지방/저지방/락토프리/두유/오틀리)","기존 우유와 동량으로 교체"],
+["카라멜 드리즐","10g (카라멜 마키아또와 동일)"],
+["초콜릿 드리즐","5g (카라멜 마키아또에서 가장자리 원형 2회 제외)"],
+["토핑 - 다크 크리스피 초코볼","10g"],
+];
+
+/* ===================== STATE ===================== */
+let order = []; // {uid, name, code, size, ing, steps}
+let activeCat = "전체";
+let sheetItem = null;
+
+const CATS = ["전체", ...Array.from(new Set(MENU.map(m=>m.cat)))];
+
+// 카테고리별 고유 색상 (다크 배경에서도 선명하게 보이도록 채도/명도 조정)
+const CAT_COLORS = {
+  "커피":       "#ff9f2e",
+  "콜드브루":   "#3fa9f5",
+  "티":         "#4fd15a",
+  "블렌디드":   "#ff5f8f",
+  "에이드":     "#1fd6c4",
+  "드링크":     "#b06bff",
+  "전통음료":   "#ffd23f",
+  "아이스크림": "#5cc8ff",
+  "시즌(5월)":  "#ff5fa8",
+  "시즌(6월)":  "#ff4d4d",
+};
+function catColor(cat){ return CAT_COLORS[cat] || "#ff9f2e"; }
+
+/* ===================== RENDER: TABS ===================== */
+const tabsEl = document.getElementById('tabs');
+CATS.forEach(cat=>{
+  const b = document.createElement('div');
+  const col = cat==="전체" ? "#ff9f2e" : catColor(cat);
+  b.className = 'tab' + (cat===activeCat?' active':'');
+  b.textContent = cat;
+  b.style.setProperty('--catcol', col);
+  if(cat===activeCat){ b.style.background = col; b.style.borderColor = col; }
+  b.onclick = ()=>{
+    activeCat = cat;
+    document.querySelectorAll('.tab').forEach(t=>{ t.classList.remove('active'); t.style.background=''; t.style.borderColor=''; t.style.color=''; });
+    b.classList.add('active'); b.style.background = col; b.style.borderColor = col; b.style.color = '#181009';
+    renderList();
+  };
+  tabsEl.appendChild(b);
+});
+
+/* ===================== SEARCH / LIST ===================== */
+const listEl = document.getElementById('list');
+const emptyMsg = document.getElementById('emptyMsg');
+const searchEl = document.getElementById('search');
+
+function matches(item, q){
+  if(!q) return true;
+  q = q.trim().toLowerCase();
+  return item.n.toLowerCase().includes(q) || (item.c||'').toLowerCase().includes(q);
+}
+
+function renderList(){
+  const q = searchEl.value;
+  const filtered = MENU.filter(m => (activeCat==="전체" || m.cat===activeCat) && matches(m,q));
+  listEl.innerHTML = '';
+  emptyMsg.style.display = filtered.length ? 'none' : 'block';
+  filtered.forEach((item)=>{
+    const idx = MENU.indexOf(item);
+    const col = catColor(item.cat);
+    const row = document.createElement('div');
+    row.className = 'item';
+    row.style.borderLeftColor = col;
+    row.innerHTML = `
+      <div class="left">
+        <div class="name">${item.n}${item.c? ' <span style="color:var(--cream-2);font-weight:400;font-size:0.78rem;">'+item.c+'</span>':''}</div>
+        <div class="meta"><span style="color:${col};font-weight:700;">${item.cat}</span> <span class="sizes">· ${item.sizes.join('/')}</span></div>
+      </div>
+      <div class="addbtn" data-idx="${idx}" style="color:${col};">＋</div>
+    `;
+    row.querySelector('.left').onclick = ()=> openSheet(item);
+    row.querySelector('.addbtn').onclick = (e)=>{ e.stopPropagation(); quickAdd(item); };
+    listEl.appendChild(row);
+  });
+}
+searchEl.addEventListener('input', renderList);
+renderList();
+
+/* ===================== DETAIL SHEET ===================== */
+const sheet = document.getElementById('sheet');
+const backdrop = document.getElementById('backdrop');
+const sheetContent = document.getElementById('sheetContent');
+let sheetSize = null;
+
+function classify(item){
+  const t = item.steps.join(' ');
+  if(/블렌더|빙삭/.test(t)) return {tier:1, cls:'tier1', label:'🧃 블렌더/빙삭 — 먼저 착수'};
+  if(/스팀|우리기|4분/.test(t)) return {tier:2, cls:'tier2', label:'♨️ 스팀·우려내기 — 중간 착수'};
+  return {tier:3, cls:'tier3', label:'⚡ 단순 조합 — 나중에 착수'};
+}
+
+function openSheet(item){
+  sheetItem = item;
+  sheetSize = item.sizes[0];
+  renderSheet();
+  sheet.classList.add('open');
+  backdrop.classList.add('open');
+}
+function closeSheet(){
+  sheet.classList.remove('open');
+  backdrop.classList.remove('open');
+}
+document.getElementById('sheetClose').onclick = closeSheet;
+backdrop.onclick = closeSheet;
+
+function renderSheet(){
+  const item = sheetItem;
+  const tier = classify(item);
+  const ingRows = item.ing.map(row=>{
+    const val = row[sheetSize];
+    if(val===undefined || val===null) return '';
+    return `<tr><td>${row.m}</td><td>${val} ${row.u||''}</td></tr>`;
+  }).join('');
+  const stepsLi = item.steps.map((s,i)=>`<li><span class="n">${i+1}</span><span>${s}</span></li>`).join('');
+  const col = catColor(item.cat);
+  sheetContent.innerHTML = `
+    <h2>${item.n}</h2>
+    <div class="code" style="color:${col};font-weight:700;">${item.cat}${item.c? ' · '+item.c : ''}</div>
+    <div class="sizeToggle">
+      ${item.sizes.map(s=>`<button data-s="${s}" class="${s===sheetSize?'active':''}" style="${s===sheetSize?`background:${col};border-color:${col};color:#181009;`:''}">${s==='단일'?'단일 사이즈':s}</button>`).join('')}
+    </div>
+    <div class="sectionLabel">재료 (${sheetSize})</div>
+    <table class="ing">${ingRows}</table>
+    <div class="sectionLabel">제조 공정</div>
+    <ul class="steps">${stepsLi}</ul>
+    <div class="tierBadge ${tier.cls}">${tier.label}</div>
+    <button class="sheetAdd" id="sheetAddBtn" style="background:${col};">이 음료 주문에 담기 (${sheetSize})</button>
+  `;
+  sheetContent.querySelectorAll('.sizeToggle button').forEach(b=>{
+    b.onclick = ()=>{ sheetSize = b.dataset.s; renderSheet(); };
+  });
+  document.getElementById('sheetAddBtn').onclick = ()=>{
+    addToOrder(item, sheetSize);
+    closeSheet();
+    openOrderPanel();
+  };
+}
+
+function quickAdd(item){
+  addToOrder(item, item.sizes[0]);
+  fabPulse();
+}
+function fabPulse(){
+  const fab = document.getElementById('fab');
+  fab.style.transform = 'scale(1.08)';
+  setTimeout(()=> fab.style.transform = 'scale(1)', 140);
+}
+
+/* ===================== ORDER QUEUE ===================== */
+function addToOrder(item, size){
+  order.push({
+    uid: Date.now()+Math.random(),
+    name: item.n, code: item.c, cat: item.cat, size,
+    steps: item.steps, done:false,
+    tier: classify(item)
+  });
+  updateFab();
+}
+function updateFab(){
+  const cnt = order.filter(o=>!o.done).length;
+  document.getElementById('fabCount').textContent = cnt;
+  document.getElementById('fab').classList.toggle('hidden', order.length===0);
+}
+
+function suggestOrder(list){
+  // tier1(블렌더/빙삭) 우선 → tier2(스팀) → tier3(단순), 동일 tier 내에서는 공정 단계 수 많은 순
+  return [...list].sort((a,b)=>{
+    if(a.tier.tier !== b.tier.tier) return a.tier.tier - b.tier.tier;
+    return b.steps.length - a.steps.length;
+  });
+}
+
+const orderPanel = document.getElementById('orderPanel');
+const opBody = document.getElementById('opBody');
+document.getElementById('fab').onclick = openOrderPanel;
+document.getElementById('opClose').onclick = ()=> orderPanel.classList.remove('open');
+document.getElementById('clearAll').onclick = ()=>{
+  if(order.length && confirm('현재 주문 목록을 모두 비울까요?')){ order=[]; updateFab(); renderOrder(); }
+};
+
+function openOrderPanel(){
+  renderOrder();
+  orderPanel.classList.add('open');
+}
+
+function renderOrder(){
+  if(order.length===0){
+    opBody.innerHTML = `<div class="queueEmpty">담긴 음료가 없어요.<br>메뉴에서 ＋ 버튼을 눌러 주문을 담아보세요.</div>`;
+    return;
+  }
+  const pending = order.filter(o=>!o.done);
+  const done = order.filter(o=>o.done);
+  const sorted = suggestOrder(pending);
+
+  const reasonText = t => t.tier===1 ? '오래 걸리는 블렌더/빙삭 작업 — 지금 바로 시작해야 다른 음료와 완성 타이밍이 맞아요.'
+                        : t.tier===2 ? '스팀우유·우려내기가 필요해 시간이 걸려요 — 두 번째로 착수하세요.'
+                        : '붓고 담는 단순 조합이라 가장 빨라요 — 마지막에 착수해도 늦지 않아요.';
+
+  let html = '';
+  sorted.forEach((o, i)=>{
+    const col = catColor(o.cat);
+    html += `
+    <div class="orderCard" style="border-left:3px solid ${col};">
+      <div class="rank" style="background:${col};">${i+1}</div>
+      <div class="oc-top">
+        <div>
+          <div class="oc-name">${o.name}</div>
+          <div class="oc-size"><span style="color:${col};font-weight:700;">${o.cat}</span> · ${o.size} 사이즈</div>
+        </div>
+      </div>
+      <div class="oc-reason">${reasonText(o.tier)}</div>
+      <div class="oc-actions">
+        <button class="done-btn" data-uid="${o.uid}">✓ 제조 완료</button>
+        <button class="del-btn" data-uid="${o.uid}">✕</button>
+      </div>
+    </div>`;
+  });
+
+  if(done.length){
+    html += `<div class="sectionLabel" style="margin-top:22px;">완료됨</div>`;
+    done.forEach(o=>{
+      const col = catColor(o.cat);
+      html += `
+      <div class="orderCard done" style="border-left:3px solid ${col};">
+        <div class="oc-top">
+          <div>
+            <div class="oc-name">${o.name}</div>
+            <div class="oc-size"><span style="color:${col};font-weight:700;">${o.cat}</span> · ${o.size} 사이즈</div>
+          </div>
+        </div>
+        <div class="oc-actions">
+          <button class="done-btn undo" data-uid="${o.uid}">되돌리기</button>
+          <button class="del-btn" data-uid="${o.uid}">✕</button>
+        </div>
+      </div>`;
+    });
+  }
+
+  html += `<div class="guideNote"><b>착수 순서 로직</b> · 여러 음료가 동시에 들어오면, 시간이 오래 걸리는 작업(블렌더·빙삭)부터 시작하고, 스팀우유 작업을 다음으로, 붓기만 하면 되는 단순 음료를 가장 나중에 시작하면 모든 음료가 비슷한 시점에 완성돼요.</div>`;
+
+  opBody.innerHTML = html;
+
+  opBody.querySelectorAll('.done-btn').forEach(b=>{
+    b.onclick = ()=>{
+      const o = order.find(x=>x.uid==b.dataset.uid);
+      o.done = !o.done;
+      updateFab(); renderOrder();
+    };
+  });
+  opBody.querySelectorAll('.del-btn').forEach(b=>{
+    b.onclick = ()=>{
+      order = order.filter(x=>x.uid!=b.dataset.uid);
+      updateFab(); renderOrder();
+    };
+  });
+}
+updateFab();
+
+/* ===================== CUSTOM OPTIONS REF ===================== */
+const refToggle = document.getElementById('refToggle');
+const refPanel = document.getElementById('refPanel');
+refToggle.onclick = ()=>{
+  const show = refPanel.style.display === 'none';
+  refPanel.style.display = show ? 'block' : 'none';
+  if(show && !refPanel.dataset.filled){
+    refPanel.dataset.filled = '1';
+    refPanel.innerHTML = `<table class="ing" style="margin-bottom:10px;">${CUSTOM_OPTIONS.map(([a,b])=>`<tr><td>${a}</td><td style="text-align:right;">${b}</td></tr>`).join('')}</table>`;
+  }
+};
+</script>
+</body>
+</html>
