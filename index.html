@@ -181,6 +181,15 @@
   .qty-btn:active{ background: var(--paper-2); }
   .qty-num{ font-weight:800; font-size:0.95rem; color:var(--ink); min-width:38px; text-align:center; }
   .oc-clickable{ cursor:pointer; }
+
+  /* POS 사진 인식 */
+  #scanStatus{ background:var(--paper-2); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin: 6px 0 14px; font-size:0.85rem; color:var(--ink); }
+  #scanStatus .scanTitle{ font-weight:800; margin-bottom:6px; }
+  #scanStatus ul{ margin:6px 0 0; padding-left:18px; }
+  #scanStatus li{ margin:3px 0; }
+  #scanStatus .ok{ color:#1c7a34; font-weight:700; }
+  #scanStatus .miss{ color:var(--danger); font-weight:700; }
+  #scanStatus .scanClose{ margin-top:10px; background:#fff; border:1px solid var(--line); border-radius:9px; padding:8px 12px; font-weight:700; font-size:0.82rem; }
 </style>
 </head>
 <body>
@@ -195,6 +204,9 @@
 </header>
 
 <main>
+  <button class="refBtn" id="scanBtn" style="background:var(--dark); color:#fff; border-color:var(--dark); display:flex; align-items:center; justify-content:center; gap:8px; font-weight:800;">📷 POS 화면 사진으로 주문 인식</button>
+  <input type="file" id="scanInput" accept="image/*" capture="environment" style="display:none;">
+  <div id="scanStatus" style="display:none;"></div>
   <button class="refBtn" id="refToggle">⚙ 고객 요청사항(시럽·휘핑·우유변경·드리즐) 기준표 보기</button>
   <div id="refPanel" style="display:none;"></div>
   <div id="list"></div>
@@ -760,7 +772,7 @@ function renderOrder(){
   let html = '';
   sorted.forEach((o, i)=>{
     const col = catColor(o.cat);
-    const isOpen = orderExpandUid===o.uid;
+    const isOpen = orderExpandUid==o.uid;
     html += `
     <div class="orderCard" style="border-left:3px solid ${col};">
       <div class="rank" style="background:${col};">${i+1}</div>
@@ -789,7 +801,7 @@ function renderOrder(){
     html += `<div class="sectionLabel" style="margin-top:22px;">완료됨</div>`;
     done.forEach(o=>{
       const col = catColor(o.cat);
-      const isOpen = orderExpandUid===o.uid;
+      const isOpen = orderExpandUid==o.uid;
       html += `
       <div class="orderCard done" style="border-left:3px solid ${col};">
         <div class="oc-top oc-clickable" data-open="${o.uid}">
@@ -860,6 +872,116 @@ refToggle.onclick = ()=>{
     refPanel.innerHTML = `<table class="ing" style="margin-bottom:10px;">${CUSTOM_OPTIONS.map(([a,b])=>`<tr><td>${a}</td><td style="text-align:right;">${b}</td></tr>`).join('')}</table>`;
   }
 };
+
+/* ===================== POS 사진 인식 ===================== */
+// 이름 정규화 — HOT/ICED, 공백, 대소문자를 제거해 기본 음료명만 비교
+function normBase(s){
+  return String(s).replace(/\(HOT\)|\(ICED\)/gi,'').replace(/아이스\s*/g,'').replace(/[\s()·・\-]/g,'').toLowerCase();
+}
+function isIcedName(s){ return /아이스|iced|ice\b/i.test(String(s)); }
+
+function matchMenuItem(rawName){
+  if(!rawName) return null;
+  const target = normBase(rawName);
+  if(!target) return null;
+  const iced = isIcedName(rawName);
+  let candidates = MENU.filter(item=>{
+    const base = normBase(item.n);
+    return base===target || base.includes(target) || target.includes(base);
+  });
+  // 코드(약어)로도 매칭 시도 — 원본에 코드가 포함돼 있으면 가산점
+  if(candidates.length===0){
+    candidates = MENU.filter(item=> item.c && item.c.length>=2 && new RegExp('\\b'+item.c+'\\b','i').test(rawName));
+  }
+  if(candidates.length===0) return null;
+  if(candidates.length===1) return candidates[0];
+  const matchIced = candidates.find(it=> isIcedName(it.n)===iced);
+  return matchIced || candidates[0];
+}
+
+const scanBtn = document.getElementById('scanBtn');
+const scanInput = document.getElementById('scanInput');
+const scanStatus = document.getElementById('scanStatus');
+
+scanBtn.onclick = ()=> scanInput.click();
+
+scanInput.onchange = async ()=>{
+  const file = scanInput.files[0];
+  if(!file) return;
+  scanStatus.style.display = 'block';
+  scanStatus.innerHTML = `<div class="scanTitle">📷 사진 인식 중…</div>사진 속 주문 화면을 읽고 있어요. 잠시만 기다려 주세요.`;
+  try{
+    const dataUrl = await fileToDataUrl(file);
+    const mediaType = dataUrl.substring(5, dataUrl.indexOf(';'));
+    const base64 = dataUrl.split(',')[1];
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1000,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+            { type: "text", text: "이 이미지는 카페 POS·키오스크의 주문 화면입니다. 화면에 표시된 음료 주문 항목과 각 항목의 수량을 읽어주세요. 사이즈나 HOT/ICED 표시가 보이면 음료 이름에 포함시켜 주세요. 오직 아래 JSON 배열 형식으로만 답하고, 다른 설명이나 코드블록 표시는 절대 포함하지 마세요:\n[{\"name\":\"음료 이름\",\"qty\":수량}]" }
+          ]
+        }]
+      })
+    });
+    const data = await response.json();
+    const textBlock = (data.content||[]).map(b=>b.text||'').join('').trim();
+    const clean = textBlock.replace(/```json|```/g,'').trim();
+    let recognized;
+    try{ recognized = JSON.parse(clean); }
+    catch(e){ throw new Error('인식 결과를 읽지 못했어요'); }
+    if(!Array.isArray(recognized) || recognized.length===0){
+      scanStatus.innerHTML = `<div class="scanTitle">😕 인식된 주문이 없어요</div>사진이 흐릿하거나 화면이 잘 안 보일 수 있어요. 다시 찍어 주세요.<button class="scanClose" id="scanCloseBtn">닫기</button>`;
+      wireScanClose();
+      return;
+    }
+
+    const matchedLines = [], missedLines = [];
+    recognized.forEach(r=>{
+      const qty = Math.max(1, parseInt(r.qty)||1);
+      const item = matchMenuItem(r.name);
+      if(item){
+        addToOrder(item, item.sizes[0], qty);
+        matchedLines.push(`<li><span class="ok">✓</span> ${r.name} → <b>${item.n}</b> · ${qty}잔</li>`);
+      } else {
+        missedLines.push(`<li><span class="miss">✕</span> ${r.name} (${qty}잔) — 메뉴에서 못 찾았어요, 직접 담아주세요</li>`);
+      }
+    });
+
+    scanStatus.innerHTML = `
+      <div class="scanTitle">📷 인식 결과 — ${recognized.length}개 중 ${matchedLines.length}개 자동으로 담김</div>
+      <ul>${matchedLines.join('')}${missedLines.join('')}</ul>
+      <button class="scanClose" id="scanCloseBtn">확인</button>
+    `;
+    wireScanClose();
+    if(matchedLines.length>0) openOrderPanel();
+  } catch(err){
+    scanStatus.innerHTML = `<div class="scanTitle">⚠️ 인식에 실패했어요</div>${err.message||'네트워크 오류가 발생했어요.'}<br><span style="font-size:0.78rem;color:var(--ink-2);">이 기능은 Claude 앱/claude.ai 안에서 열었을 때만 동작해요. Vercel 등 외부 배포본에서는 별도 서버 연동이 필요합니다.</span><button class="scanClose" id="scanCloseBtn">닫기</button>`;
+    wireScanClose();
+  } finally {
+    scanInput.value = '';
+  }
+};
+
+function wireScanClose(){
+  const b = document.getElementById('scanCloseBtn');
+  if(b) b.onclick = ()=>{ scanStatus.style.display='none'; scanStatus.innerHTML=''; };
+}
+
+function fileToDataUrl(file){
+  return new Promise((resolve, reject)=>{
+    const r = new FileReader();
+    r.onload = ()=> resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
 </script>
 </body>
 </html>
