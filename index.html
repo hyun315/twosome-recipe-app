@@ -6,176 +6,189 @@
 <title>투썸 레시피 · 제조 순서 도우미</title>
 <style>
   :root{
-    --coffee-950:#181009;
-    --coffee-900:#2b1a10;
-    --coffee-800:#40270f;
-    --coffee-700:#5a331d;
-    --coffee-500:#8a5a34;
-    --cream:#ffffff;
-    --cream-2:#e8dcc8;
-    --caramel:#e8912a;
-    --caramel-2:#ffab3d;
-    --mint:#5fe089;
-    --danger:#ff6b52;
-    --line: rgba(255,255,255,0.18);
+    /* 짙은 요소(헤더·바텀시트) 전용 */
+    --dark:#241408;
+    --dark-2:#3a2210;
+    /* 본문은 항상 밝은 배경 + 진한 글씨 = 어떤 환경에서도 대비가 보장됨 */
+    --paper:#fffdf9;
+    --paper-2:#f4ead9;
+    --ink:#241408;
+    --ink-2:#5c4632;
+    --white:#ffffff;
+    --caramel:#c9700a;
+    --caramel-strong:#a85800;
+    --mint:#1f9e52;
+    --danger:#d43b1f;
+    --line: rgba(36,20,8,0.14);
+    --line-dark: rgba(255,255,255,0.18);
     font-size:16px;
   }
   *{box-sizing:border-box;}
-  html{ background: #181009; }
-  html,body{margin:0;padding:0; min-height:100%;}
+  html,body{margin:0;padding:0;}
   body{
-    background: var(--coffee-950);
-    color: var(--cream);
+    background: var(--paper);
+    color: var(--ink);
     font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", sans-serif;
     -webkit-tap-highlight-color: transparent;
     padding-bottom: 100px;
   }
-  /* header */
+  /* header (짙은 배경 — 브랜드 포인트) */
   header{
     position: sticky; top:0; z-index: 40;
-    background: linear-gradient(180deg, var(--coffee-950) 70%, rgba(28,18,11,0.85));
+    background: var(--dark);
     padding: 14px 16px 10px;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--line-dark);
   }
-  .brand{
-    display:flex; align-items:baseline; gap:8px; margin-bottom:10px;
-  }
+  .brand{ display:flex; align-items:baseline; gap:8px; margin-bottom:10px; }
   .brand .mark{
     font-family: Georgia, "Noto Serif KR", serif;
-    font-size: 1.05rem; letter-spacing: 0.06em; color: var(--caramel-2);
-    border: 1px solid var(--caramel-2); border-radius: 3px; padding: 1px 6px;
+    font-size: 1.05rem; letter-spacing: 0.06em; color: #ffb457;
+    border: 1px solid #ffb457; border-radius: 3px; padding: 1px 6px;
   }
-  .brand h1{
-    font-size: 1.15rem; font-weight: 700; margin:0; color: var(--cream);
-    letter-spacing: -0.01em;
-  }
+  .brand h1{ font-size: 1.15rem; font-weight: 700; margin:0; color: #ffffff; letter-spacing: -0.01em; }
   .searchwrap{ position:relative; }
   #search{
     width:100%; padding: 12px 40px 12px 14px; border-radius: 12px;
-    border: 1px solid var(--line); background: var(--coffee-900); color: var(--cream);
+    border: 1px solid var(--line-dark); background: var(--dark-2); color: #ffffff;
     font-size: 1rem; outline:none;
   }
-  #search:focus{ border-color: var(--caramel); }
-  .searchwrap svg{ position:absolute; right:12px; top:50%; transform:translateY(-50%); opacity:0.6;}
+  #search::placeholder{ color:#cbb9a3; }
+  #search:focus{ border-color: #ffb457; }
+  .searchwrap svg{ position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#cbb9a3;}
   .tabs{ display:flex; gap:6px; margin-top:10px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none;}
   .tabs::-webkit-scrollbar{display:none;}
   .tab{
     flex: 0 0 auto; padding:6px 12px; border-radius:999px; font-size:0.8rem;
-    background: var(--coffee-900); border:1px solid var(--line); color: var(--cream-2);
-    white-space:nowrap; cursor:pointer;
+    background: var(--dark-2); border:1px solid var(--line-dark); color: #e8dcc8;
+    white-space:nowrap; cursor:pointer; font-weight:600;
   }
-  .tab.active{ background: var(--caramel); border-color: var(--caramel); color: var(--coffee-950); font-weight:700;}
+  .tab.active{ color: #ffffff; font-weight:800;}
 
-  main{ padding: 14px 16px 40px; max-width: 720px; margin: 0 auto; background: var(--coffee-950); min-height: 60vh; }
+  /* 본문: 밝은 배경 고정 */
+  main{ padding: 14px 16px 40px; max-width: 720px; margin: 0 auto; background: var(--paper); }
 
-  .empty{ text-align:center; color: var(--cream-2); padding: 60px 20px; font-size:0.9rem; }
+  .empty{ text-align:center; color: var(--ink-2); padding: 60px 20px; font-size:0.9rem; background:var(--paper); }
 
   /* list */
   .item{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
     padding: 13px 4px; border-bottom: 1px solid var(--line); cursor:pointer;
+    background: var(--paper); border-left: 4px solid transparent; padding-left: 10px;
   }
   .item .left{ flex:1; min-width:0; }
-  .item .name{ font-size:0.98rem; font-weight:600; color: var(--cream); }
-  .item .meta{ font-size:0.76rem; color: var(--caramel-2); margin-top:3px; }
-  .item .sizes{ font-size:0.72rem; color: var(--cream-2); margin-left:6px; }
-  .item{ border-left: 3px solid transparent; padding-left: 10px; }
+  .item .name{ font-size:1rem; font-weight:700; color: var(--ink); }
+  .item .meta{ font-size:0.78rem; font-weight:700; margin-top:3px; }
+  .item .sizes{ font-size:0.76rem; color: var(--ink-2); font-weight:500; margin-left:6px; }
   .addbtn{
-    flex:0 0 auto; width:34px; height:34px; border-radius:50%;
-    background: var(--coffee-800); border:1px solid var(--line); color: var(--caramel-2);
-    font-size:1.2rem; display:flex; align-items:center; justify-content:center;
+    flex:0 0 auto; width:36px; height:36px; border-radius:50%;
+    background: var(--paper-2); border:1px solid var(--line); color: var(--caramel-strong);
+    font-size:1.3rem; font-weight:700; display:flex; align-items:center; justify-content:center;
   }
-  .addbtn:active{ background: var(--caramel); color:var(--coffee-950); }
+  .addbtn:active{ background: var(--caramel); color:#ffffff; border-color:var(--caramel); }
 
-  /* detail sheet */
-  .sheet-backdrop{
-    position:fixed; inset:0; background: rgba(0,0,0,0.55); z-index:60;
-    display:none;
-  }
+  /* detail sheet (짙은 배경) */
+  .sheet-backdrop{ position:fixed; inset:0; background: rgba(0,0,0,0.55); z-index:80; display:none; }
   .sheet{
-    position:fixed; left:0; right:0; bottom:0; z-index:61;
-    background: var(--coffee-900); border-radius: 18px 18px 0 0;
+    position:fixed; left:0; right:0; bottom:0; z-index:81;
+    background: var(--dark); border-radius: 18px 18px 0 0;
     max-height: 88vh; overflow-y:auto;
     padding: 10px 18px 28px;
     transform: translateY(100%); transition: transform .22s ease;
     box-shadow: 0 -8px 30px rgba(0,0,0,0.4);
+    color:#ffffff;
   }
   .sheet.open{ transform: translateY(0); }
   .sheet-backdrop.open{ display:block; }
-  .grabber{ width:36px; height:4px; background: var(--line); border-radius:2px; margin: 6px auto 12px; }
-  .sheet h2{ margin:0 0 2px; font-size:1.25rem; }
-  .sheet .code{ color: var(--caramel-2); font-size:0.8rem; margin-bottom:14px; }
+  .grabber{ width:36px; height:4px; background: var(--line-dark); border-radius:2px; margin: 6px auto 12px; }
+  .sheet h2{ margin:0 0 2px; font-size:1.25rem; color:#ffffff; }
+  .sheet .code{ font-size:0.82rem; font-weight:700; margin-bottom:14px; }
   .sizeToggle{ display:flex; gap:6px; margin-bottom:14px; }
   .sizeToggle button{
-    flex:1; padding:9px 0; border-radius:10px; border:1px solid var(--line);
-    background: var(--coffee-800); color:var(--cream-2); font-weight:700; font-size:0.85rem;
+    flex:1; padding:9px 0; border-radius:10px; border:1px solid var(--line-dark);
+    background: var(--dark-2); color:#e8dcc8; font-weight:700; font-size:0.85rem;
   }
-  .sizeToggle button.active{ background: var(--caramel); color:var(--coffee-950); border-color:var(--caramel); }
-  .sectionLabel{ font-size:0.78rem; color: var(--caramel-2); font-weight:700; margin: 16px 0 6px; letter-spacing:0.03em; }
-  table.ing{ width:100%; border-collapse:collapse; font-size:0.88rem; }
-  table.ing td{ padding:7px 4px; border-bottom:1px solid var(--line); }
-  table.ing td:first-child{ color:var(--cream); }
-  table.ing td:last-child{ text-align:right; color:var(--cream-2); }
+  .sectionLabel{ font-size:0.78rem; color: #ffb457; font-weight:800; margin: 16px 0 6px; letter-spacing:0.03em; }
+  table.ing{ width:100%; border-collapse:collapse; font-size:0.9rem; }
+  table.ing td{ padding:8px 4px; border-bottom:1px solid var(--line-dark); }
+  table.ing td:first-child{ color:#ffffff; }
+  table.ing td:last-child{ text-align:right; color:#e8dcc8; font-weight:600; }
   .steps{ margin:0; padding-left:0; list-style:none; }
-  .steps li{ display:flex; gap:8px; padding:7px 0; font-size:0.9rem; line-height:1.4; border-bottom:1px dashed var(--line); }
-  .steps li .n{ flex:0 0 20px; color:var(--caramel-2); font-weight:700; }
-  .tierBadge{ display:inline-block; margin-top:14px; padding:4px 10px; border-radius:999px; font-size:0.75rem; font-weight:700; }
-  .tier1{ background: rgba(200,130,58,0.22); color:var(--caramel-2); }
-  .tier2{ background: rgba(126,168,138,0.2); color:var(--mint); }
-  .tier3{ background: rgba(244,234,217,0.12); color:var(--cream-2); }
+  .steps li{ display:flex; gap:8px; padding:8px 0; font-size:0.92rem; line-height:1.5; border-bottom:1px dashed var(--line-dark); color:#f4ead9; }
+  .steps li .n{ flex:0 0 20px; color:#ffb457; font-weight:800; }
+  .tierBadge{ display:inline-block; margin-top:14px; padding:5px 12px; border-radius:999px; font-size:0.78rem; font-weight:800; }
+  .tier1{ background: #ffb457; color:#241408; }
+  .tier2{ background: #6ee08f; color:#0c2f18; }
+  .tier3{ background: #e8dcc8; color:#241408; }
   .sheetAdd{
     margin-top:20px; width:100%; padding:14px; border-radius:12px; border:none;
-    background: var(--caramel); color:var(--coffee-950); font-weight:800; font-size:1rem;
+    color: #ffffff; font-weight:800; font-size:1rem;
   }
-  .closeX{ position:absolute; top:14px; right:16px; background:none; border:none; color:var(--cream-2); font-size:1.3rem; }
+  .closeX{ position:absolute; top:14px; right:16px; background:none; border:none; color:#e8dcc8; font-size:1.3rem; }
 
   /* order fab + panel */
   .fab{
     position:fixed; right:16px; bottom:16px; z-index:50;
-    background: var(--caramel); color:var(--coffee-950); border-radius:999px;
+    background: var(--caramel); color:#ffffff; border-radius:999px;
     padding: 13px 18px; font-weight:800; font-size:0.95rem; box-shadow:0 6px 18px rgba(0,0,0,0.4);
     display:flex; align-items:center; gap:8px; border:none;
   }
-  .fab .badge{ background: var(--coffee-950); color:var(--caramel-2); border-radius:999px; padding:1px 8px; font-size:0.8rem; }
+  .fab .badge{ background: #ffffff; color:var(--caramel-strong); border-radius:999px; padding:1px 8px; font-size:0.8rem; font-weight:800; }
   .fab.hidden{ display:none; }
 
   .orderPanel{
-    position:fixed; inset:0; z-index:70; background: var(--coffee-950);
+    position:fixed; inset:0; z-index:70; background: var(--paper);
     transform: translateX(100%); transition: transform .22s ease; overflow-y:auto;
   }
   .orderPanel.open{ transform: translateX(0); }
-  .opHeader{ position:sticky; top:0; background:var(--coffee-950); padding:16px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; z-index:2;}
-  .opHeader h2{ margin:0; font-size:1.15rem; }
-  .opBody{ padding: 6px 16px 120px; max-width:720px; margin:0 auto; }
-  .queueEmpty{ text-align:center; padding:60px 20px; color:var(--cream-2); font-size:0.9rem; }
+  .opHeader{ position:sticky; top:0; background:var(--dark); padding:16px; border-bottom:1px solid var(--line-dark); display:flex; align-items:center; justify-content:space-between; z-index:2; color:#ffffff;}
+  .opHeader h2{ margin:0; font-size:1.15rem; color:#ffffff; }
+  .opBody{ padding: 14px 16px 120px; max-width:720px; margin:0 auto; background:var(--paper); }
+  .queueEmpty{ text-align:center; padding:60px 20px; color:var(--ink-2); font-size:0.9rem; }
 
   .orderCard{
-    background: var(--coffee-900); border:1px solid var(--line); border-radius:14px;
+    background: var(--paper-2); border:1px solid var(--line); border-radius:14px;
     padding:14px; margin-top:12px; position:relative;
   }
   .orderCard .rank{
     position:absolute; left:-10px; top:-10px; width:30px; height:30px; border-radius:50%;
-    background: var(--caramel); color:var(--coffee-950); font-weight:800; font-size:0.95rem;
-    display:flex; align-items:center; justify-content:center; box-shadow:0 3px 8px rgba(0,0,0,0.4);
+    background: var(--caramel); color:#ffffff; font-weight:800; font-size:0.95rem;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 3px 8px rgba(0,0,0,0.3);
   }
-  .orderCard.done{ opacity:0.4; }
+  .orderCard.done{ opacity:0.55; }
   .orderCard .oc-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
-  .orderCard .oc-name{ font-weight:700; font-size:1rem; }
-  .orderCard .oc-size{ font-size:0.75rem; color:var(--caramel-2); margin-top:2px; }
-  .orderCard .oc-reason{ font-size:0.8rem; color:var(--cream-2); margin-top:6px; line-height:1.4; }
+  .orderCard .oc-name{ font-weight:800; font-size:1.02rem; color:var(--ink); }
+  .orderCard .oc-size{ font-size:0.78rem; margin-top:2px; font-weight:600; color:var(--ink-2); }
+  .orderCard .oc-reason{ font-size:0.82rem; color:var(--ink-2); margin-top:6px; line-height:1.45; }
   .oc-actions{ display:flex; gap:8px; margin-top:10px; }
-  .oc-actions button{ flex:1; padding:9px 0; border-radius:9px; border:1px solid var(--line); background:var(--coffee-800); color:var(--cream); font-size:0.85rem; font-weight:700;}
-  .oc-actions button.done-btn{ background: var(--mint); color:var(--coffee-950); border-color:var(--mint); }
-  .oc-actions button.done-btn.undo{ background: var(--coffee-800); color:var(--cream-2); }
-  .oc-actions button.del-btn{ background: var(--danger); color: var(--cream); border-color:var(--danger); flex:0 0 46px; }
+  .oc-actions button{ flex:1; padding:10px 0; border-radius:9px; border:1px solid var(--line); background:#ffffff; color:var(--ink); font-size:0.85rem; font-weight:700;}
+  .oc-actions button.done-btn{ background: var(--mint); color:#ffffff; border-color:var(--mint); }
+  .oc-actions button.done-btn.undo{ background: #ffffff; color:var(--ink-2); }
+  .oc-actions button.del-btn{ background: var(--danger); color: #ffffff; border-color:var(--danger); flex:0 0 46px; }
 
-  .guideNote{ background: var(--coffee-800); border-radius:12px; padding:12px 14px; font-size:0.8rem; color:var(--cream-2); margin-top:14px; line-height:1.5;}
-  .guideNote b{ color:var(--caramel-2); }
+  .guideNote{ background: var(--paper-2); border:1px solid var(--line); border-radius:12px; padding:12px 14px; font-size:0.82rem; color:var(--ink-2); margin-top:14px; line-height:1.55;}
+  .guideNote b{ color:var(--caramel-strong); }
 
-  .clearAll{ font-size:0.8rem; color: var(--danger); background:none; border:none; }
+  .clearAll{ font-size:0.8rem; color: #ffb457; background:none; border:none; font-weight:700; }
 
   /* customization ref */
-  .refBtn{ width:100%; text-align:left; background:var(--coffee-900); border:1px solid var(--line); color:var(--cream-2); padding:12px 14px; border-radius:12px; font-size:0.85rem; margin: 6px 0 14px; }
+  .refBtn{ width:100%; text-align:left; background:var(--paper-2); border:1px solid var(--line); color:var(--ink); font-weight:700; padding:12px 14px; border-radius:12px; font-size:0.85rem; margin: 6px 0 14px; }
+
+  /* drink icon thumbnail */
+  .thumb{
+    flex:0 0 auto; border-radius:12px; background:#ffffff;
+    border:1px solid var(--line); display:flex; align-items:center; justify-content:center;
+  }
+  .thumb-dark{ background:#33200f; border-color: var(--line-dark); }
+
+  /* qty stepper */
+  .oc-qty{ display:flex; align-items:center; gap:10px; margin-top:10px; }
+  .qty-btn{
+    width:34px; height:34px; border-radius:9px; border:1px solid var(--line);
+    background:#ffffff; color:var(--ink); font-size:1.1rem; font-weight:800; line-height:1;
+  }
+  .qty-btn:active{ background: var(--paper-2); }
+  .qty-num{ font-weight:800; font-size:0.95rem; color:var(--ink); min-width:38px; text-align:center; }
+  .oc-clickable{ cursor:pointer; }
 </style>
 </head>
 <body>
@@ -460,34 +473,87 @@ let sheetItem = null;
 
 const CATS = ["전체", ...Array.from(new Set(MENU.map(m=>m.cat)))];
 
-// 카테고리별 고유 색상 (다크 배경에서도 선명하게 보이도록 채도/명도 조정)
-const CAT_COLORS = {
+// 카테고리별 고유 색상
+// BRIGHT: 어두운 배경(헤더 탭·상세 시트) 위에서 쓰는 밝고 선명한 톤 — 짙은 글씨와 짝
+// DARK  : 밝은 배경(본문 목록·주문 카드) 위에서 쓰는 진하고 채도 높은 톤 — 흰 배경에서도 또렷하게 읽힘
+const CAT_COLORS_BRIGHT = {
   "커피":       "#ff9f2e",
-  "콜드브루":   "#3fa9f5",
-  "티":         "#4fd15a",
-  "블렌디드":   "#ff5f8f",
-  "에이드":     "#1fd6c4",
-  "드링크":     "#b06bff",
+  "콜드브루":   "#5cb8ff",
+  "티":         "#5fe075",
+  "블렌디드":   "#ff6fa0",
+  "에이드":     "#2be0cd",
+  "드링크":     "#c08bff",
   "전통음료":   "#ffd23f",
-  "아이스크림": "#5cc8ff",
-  "시즌(5월)":  "#ff5fa8",
-  "시즌(6월)":  "#ff4d4d",
+  "아이스크림": "#6cd2ff",
+  "시즌(5월)":  "#ff6fbf",
+  "시즌(6월)":  "#ff6a5c",
 };
-function catColor(cat){ return CAT_COLORS[cat] || "#ff9f2e"; }
+const CAT_COLORS_DARK = {
+  "커피":       "#a15a00",
+  "콜드브루":   "#0f5f9e",
+  "티":         "#1c7a34",
+  "블렌디드":   "#ab2159",
+  "에이드":     "#0a7a70",
+  "드링크":     "#6428c7",
+  "전통음료":   "#8f6a00",
+  "아이스크림": "#0e6f96",
+  "시즌(5월)":  "#96206f",
+  "시즌(6월)":  "#c22c1c",
+};
+function catColorBright(cat){ return CAT_COLORS_BRIGHT[cat] || "#ff9f2e"; }
+function catColorDark(cat){ return CAT_COLORS_DARK[cat] || "#a15a00"; }
+// 하위 호환용 기본값(밝은 배경 텍스트 용도) — 기존 코드에서 catColor() 호출 시 진한 톤을 반환
+function catColor(cat){ return catColorDark(cat); }
+
+/* ===================== 음료 아이콘(간단 컵 일러스트) ===================== */
+// 실제 매장 제품사진은 저작권·호스팅 문제가 있어, 카테고리색+HOT/ICED/블렌디드 형태를
+// 살린 심플한 컵 아이콘을 즉석에서 그려서 보여줍니다.
+function drinkType(item){
+  const iced = /아이스|\(ICED\)/i.test(item.n);
+  if(classify(item).tier===1) return 'blend';
+  return iced ? 'iced' : 'hot';
+}
+function cupSVG(item, px){
+  const col = catColorDark(item.cat);
+  const type = drinkType(item);
+  let inner = '';
+  if(type==='hot'){
+    inner = `
+      <path d="M8 12h20v14a6 6 0 0 1-6 6H14a6 6 0 0 1-6-6V12z" fill="${col}"/>
+      <path d="M28 15h3.2a4 4 0 0 1 0 8H28" fill="none" stroke="${col}" stroke-width="2.4"/>
+      <path d="M12 6c1-2 3-2 3 0s2 2 3 0" stroke="${col}" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      <path d="M19 6c1-2 3-2 3 0s2 2 3 0" stroke="${col}" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
+  } else if(type==='iced'){
+    inner = `
+      <path d="M10 10h20l-2.2 24a3 3 0 0 1-3 2.8H15.2a3 3 0 0 1-3-2.8L10 10z" fill="${col}" opacity="0.88"/>
+      <rect x="14" y="16" width="6" height="6" rx="1.2" fill="#ffffff" opacity="0.85" transform="rotate(-12 17 19)"/>
+      <rect x="20" y="23" width="5" height="5" rx="1.2" fill="#ffffff" opacity="0.7" transform="rotate(10 22 25)"/>
+      <line x1="25" y1="4" x2="27.5" y2="17" stroke="${col}" stroke-width="2.4" stroke-linecap="round"/>`;
+  } else {
+    inner = `
+      <path d="M11 15h18l-1.6 19.5a3 3 0 0 1-3 2.7H15.6a3 3 0 0 1-3-2.7L11 15z" fill="${col}"/>
+      <ellipse cx="20" cy="15" rx="9" ry="3" fill="${col}"/>
+      <ellipse cx="20" cy="13.4" rx="6.6" ry="2" fill="#ffffff" opacity="0.9"/>
+      <line x1="22" y1="4" x2="23.5" y2="16" stroke="${col}" stroke-width="2.4" stroke-linecap="round"/>`;
+  }
+  return `<svg width="${px}" height="${px}" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+}
+function thumb(item, boxPx, dark){
+  return `<div class="thumb ${dark?'thumb-dark':''}" style="width:${boxPx}px;height:${boxPx}px;">${cupSVG(item, Math.round(boxPx*0.72))}</div>`;
+}
 
 /* ===================== RENDER: TABS ===================== */
 const tabsEl = document.getElementById('tabs');
 CATS.forEach(cat=>{
   const b = document.createElement('div');
-  const col = cat==="전체" ? "#ff9f2e" : catColor(cat);
+  const col = cat==="전체" ? "#ff9f2e" : catColorBright(cat);
   b.className = 'tab' + (cat===activeCat?' active':'');
   b.textContent = cat;
-  b.style.setProperty('--catcol', col);
-  if(cat===activeCat){ b.style.background = col; b.style.borderColor = col; }
+  if(cat===activeCat){ b.style.background = col; b.style.borderColor = col; b.style.color = '#241408'; }
   b.onclick = ()=>{
     activeCat = cat;
     document.querySelectorAll('.tab').forEach(t=>{ t.classList.remove('active'); t.style.background=''; t.style.borderColor=''; t.style.color=''; });
-    b.classList.add('active'); b.style.background = col; b.style.borderColor = col; b.style.color = '#181009';
+    b.classList.add('active'); b.style.background = col; b.style.borderColor = col; b.style.color = '#241408';
     renderList();
   };
   tabsEl.appendChild(b);
@@ -516,8 +582,9 @@ function renderList(){
     row.className = 'item';
     row.style.borderLeftColor = col;
     row.innerHTML = `
+      ${thumb(item, 44)}
       <div class="left">
-        <div class="name">${item.n}${item.c? ' <span style="color:var(--cream-2);font-weight:400;font-size:0.78rem;">'+item.c+'</span>':''}</div>
+        <div class="name">${item.n}${item.c? ' <span style="color:var(--ink-2);font-weight:600;font-size:0.78rem;">'+item.c+'</span>':''}</div>
         <div class="meta"><span style="color:${col};font-weight:700;">${item.cat}</span> <span class="sizes">· ${item.sizes.join('/')}</span></div>
       </div>
       <div class="addbtn" data-idx="${idx}" style="color:${col};">＋</div>
@@ -566,19 +633,24 @@ function renderSheet(){
     return `<tr><td>${row.m}</td><td>${val} ${row.u||''}</td></tr>`;
   }).join('');
   const stepsLi = item.steps.map((s,i)=>`<li><span class="n">${i+1}</span><span>${s}</span></li>`).join('');
-  const col = catColor(item.cat);
+  const col = catColorBright(item.cat);
   sheetContent.innerHTML = `
-    <h2>${item.n}</h2>
-    <div class="code" style="color:${col};font-weight:700;">${item.cat}${item.c? ' · '+item.c : ''}</div>
-    <div class="sizeToggle">
-      ${item.sizes.map(s=>`<button data-s="${s}" class="${s===sheetSize?'active':''}" style="${s===sheetSize?`background:${col};border-color:${col};color:#181009;`:''}">${s==='단일'?'단일 사이즈':s}</button>`).join('')}
+    <div style="display:flex; align-items:center; gap:12px;">
+      ${thumb(item, 56, true)}
+      <div>
+        <h2>${item.n}</h2>
+        <div class="code" style="color:${col};font-weight:800;">${item.cat}${item.c? ' · '+item.c : ''}</div>
+      </div>
+    </div>
+    <div class="sizeToggle" style="margin-top:14px;">
+      ${item.sizes.map(s=>`<button data-s="${s}" class="${s===sheetSize?'active':''}" style="${s===sheetSize?`background:${col};border-color:${col};color:#241408;`:''}">${s==='단일'?'단일 사이즈':s}</button>`).join('')}
     </div>
     <div class="sectionLabel">재료 (${sheetSize})</div>
     <table class="ing">${ingRows}</table>
     <div class="sectionLabel">제조 공정</div>
     <ul class="steps">${stepsLi}</ul>
     <div class="tierBadge ${tier.cls}">${tier.label}</div>
-    <button class="sheetAdd" id="sheetAddBtn" style="background:${col};">이 음료 주문에 담기 (${sheetSize})</button>
+    <button class="sheetAdd" id="sheetAddBtn" style="background:${col};color:#241408;">이 음료 주문에 담기 (${sheetSize})</button>
   `;
   sheetContent.querySelectorAll('.sizeToggle button').forEach(b=>{
     b.onclick = ()=>{ sheetSize = b.dataset.s; renderSheet(); };
@@ -602,16 +674,22 @@ function fabPulse(){
 
 /* ===================== ORDER QUEUE ===================== */
 function addToOrder(item, size){
-  order.push({
-    uid: Date.now()+Math.random(),
-    name: item.n, code: item.c, cat: item.cat, size,
-    steps: item.steps, done:false,
-    tier: classify(item)
-  });
+  const existing = order.find(o=> !o.done && o.name===item.n && o.size===size);
+  if(existing){
+    existing.qty += 1;
+  } else {
+    order.push({
+      uid: Date.now()+Math.random(),
+      name: item.n, code: item.c, cat: item.cat, size,
+      steps: item.steps, done:false, qty:1,
+      menuItem: item,
+      tier: classify(item)
+    });
+  }
   updateFab();
 }
 function updateFab(){
-  const cnt = order.filter(o=>!o.done).length;
+  const cnt = order.filter(o=>!o.done).reduce((s,o)=>s+o.qty,0);
   document.getElementById('fabCount').textContent = cnt;
   document.getElementById('fab').classList.toggle('hidden', order.length===0);
 }
@@ -656,13 +734,19 @@ function renderOrder(){
     html += `
     <div class="orderCard" style="border-left:3px solid ${col};">
       <div class="rank" style="background:${col};">${i+1}</div>
-      <div class="oc-top">
+      <div class="oc-top oc-clickable" data-open="${o.uid}">
+        ${thumb(o.menuItem, 46)}
         <div>
           <div class="oc-name">${o.name}</div>
           <div class="oc-size"><span style="color:${col};font-weight:700;">${o.cat}</span> · ${o.size} 사이즈</div>
         </div>
       </div>
       <div class="oc-reason">${reasonText(o.tier)}</div>
+      <div class="oc-qty">
+        <button class="qty-btn minus" data-uid="${o.uid}">－</button>
+        <span class="qty-num">${o.qty}잔</span>
+        <button class="qty-btn plus" data-uid="${o.uid}">＋</button>
+      </div>
       <div class="oc-actions">
         <button class="done-btn" data-uid="${o.uid}">✓ 제조 완료</button>
         <button class="del-btn" data-uid="${o.uid}">✕</button>
@@ -676,10 +760,11 @@ function renderOrder(){
       const col = catColor(o.cat);
       html += `
       <div class="orderCard done" style="border-left:3px solid ${col};">
-        <div class="oc-top">
+        <div class="oc-top oc-clickable" data-open="${o.uid}">
+          ${thumb(o.menuItem, 46)}
           <div>
             <div class="oc-name">${o.name}</div>
-            <div class="oc-size"><span style="color:${col};font-weight:700;">${o.cat}</span> · ${o.size} 사이즈</div>
+            <div class="oc-size"><span style="color:${col};font-weight:700;">${o.cat}</span> · ${o.size} 사이즈 · ${o.qty}잔</div>
           </div>
         </div>
         <div class="oc-actions">
@@ -690,10 +775,20 @@ function renderOrder(){
     });
   }
 
-  html += `<div class="guideNote"><b>착수 순서 로직</b> · 여러 음료가 동시에 들어오면, 시간이 오래 걸리는 작업(블렌더·빙삭)부터 시작하고, 스팀우유 작업을 다음으로, 붓기만 하면 되는 단순 음료를 가장 나중에 시작하면 모든 음료가 비슷한 시점에 완성돼요.</div>`;
+  html += `<div class="guideNote"><b>착수 순서 로직</b> · 여러 음료가 동시에 들어오면, 시간이 오래 걸리는 작업(블렌더·빙삭)부터 시작하고, 스팀우유 작업을 다음으로, 붓기만 하면 되는 단순 음료를 가장 나중에 시작하면 모든 음료가 비슷한 시점에 완성돼요. 음료 이름을 탭하면 제조법을 바로 볼 수 있어요.</div>`;
 
   opBody.innerHTML = html;
 
+  opBody.querySelectorAll('.oc-clickable').forEach(el=>{
+    el.onclick = ()=>{
+      const o = order.find(x=>x.uid==el.dataset.open);
+      if(!o) return;
+      sheetItem = o.menuItem; sheetSize = o.size;
+      renderSheet();
+      sheet.classList.add('open');
+      backdrop.classList.add('open');
+    };
+  });
   opBody.querySelectorAll('.done-btn').forEach(b=>{
     b.onclick = ()=>{
       const o = order.find(x=>x.uid==b.dataset.uid);
@@ -704,6 +799,21 @@ function renderOrder(){
   opBody.querySelectorAll('.del-btn').forEach(b=>{
     b.onclick = ()=>{
       order = order.filter(x=>x.uid!=b.dataset.uid);
+      updateFab(); renderOrder();
+    };
+  });
+  opBody.querySelectorAll('.qty-btn.plus').forEach(b=>{
+    b.onclick = ()=>{
+      const o = order.find(x=>x.uid==b.dataset.uid);
+      o.qty += 1;
+      updateFab(); renderOrder();
+    };
+  });
+  opBody.querySelectorAll('.qty-btn.minus').forEach(b=>{
+    b.onclick = ()=>{
+      const o = order.find(x=>x.uid==b.dataset.uid);
+      o.qty -= 1;
+      if(o.qty<=0){ order = order.filter(x=>x.uid!==o.uid); }
       updateFab(); renderOrder();
     };
   });
