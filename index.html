@@ -86,41 +86,33 @@
   }
   .addbtn:active{ background: var(--caramel); color:#ffffff; border-color:var(--caramel); }
 
-  /* detail sheet (짙은 배경) */
-  .sheet-backdrop{ position:fixed; inset:0; background: rgba(0,0,0,0.55); z-index:80; display:none; }
-  .sheet{
-    position:fixed; left:0; right:0; bottom:0; z-index:81;
-    background: var(--dark); border-radius: 18px 18px 0 0;
-    max-height: 88vh; overflow-y:auto;
-    padding: 10px 18px 28px;
-    transform: translateY(100%); transition: transform .22s ease;
-    box-shadow: 0 -8px 30px rgba(0,0,0,0.4);
-    color:#ffffff;
+  /* 인라인 레시피 펼치기 패널 (목록/주문 카드 공용, 밝은 배경) */
+  .detailPanel{
+    background: var(--paper-2); border:1px solid var(--line); border-radius:14px;
+    padding:14px 14px 16px; margin: 4px 4px 12px;
   }
-  .sheet.open{ transform: translateY(0); }
-  .sheet-backdrop.open{ display:block; }
-  .grabber{ width:36px; height:4px; background: var(--line-dark); border-radius:2px; margin: 6px auto 12px; }
-  .sheet h2{ margin:0 0 2px; font-size:1.25rem; color:#ffffff; }
-  .sheet .code{ font-size:0.82rem; font-weight:700; margin-bottom:14px; }
-  .sizeToggle{ display:flex; gap:6px; margin-bottom:14px; }
+  .sizeToggle{ display:flex; gap:6px; margin-bottom:12px; }
   .sizeToggle button{
-    flex:1; padding:9px 0; border-radius:10px; border:1px solid var(--line-dark);
-    background: var(--dark-2); color:#e8dcc8; font-weight:700; font-size:0.85rem;
+    flex:1; padding:9px 0; border-radius:10px; border:1px solid var(--line);
+    background: #ffffff; color:var(--ink); font-weight:700; font-size:0.85rem;
   }
-  .sectionLabel{ font-size:0.78rem; color: #ffb457; font-weight:800; margin: 16px 0 6px; letter-spacing:0.03em; }
+  .cupStepper{ display:flex; align-items:center; justify-content:space-between; gap:10px; background:#ffffff; border:1px solid var(--line); border-radius:10px; padding:9px 12px; margin-bottom:10px; }
+  .cupLabel{ font-size:0.82rem; font-weight:700; color:var(--ink); }
+  .cupCtrl{ display:flex; align-items:center; gap:8px; flex:0 0 auto; }
+  .sectionLabel{ font-size:0.78rem; color: var(--caramel-strong); font-weight:800; margin: 14px 0 6px; letter-spacing:0.03em; }
   table.ing{ width:100%; border-collapse:collapse; font-size:0.9rem; }
-  table.ing td{ padding:8px 4px; border-bottom:1px solid var(--line-dark); }
-  table.ing td:first-child{ color:#ffffff; }
-  table.ing td:last-child{ text-align:right; color:#e8dcc8; font-weight:600; }
+  table.ing td{ padding:8px 4px; border-bottom:1px solid var(--line); }
+  table.ing td:first-child{ color:var(--ink); }
+  table.ing td:last-child{ text-align:right; color:var(--ink-2); font-weight:700; }
   .steps{ margin:0; padding-left:0; list-style:none; }
-  .steps li{ display:flex; gap:8px; padding:8px 0; font-size:0.92rem; line-height:1.5; border-bottom:1px dashed var(--line-dark); color:#f4ead9; }
-  .steps li .n{ flex:0 0 20px; color:#ffb457; font-weight:800; }
+  .steps li{ display:flex; gap:8px; padding:8px 0; font-size:0.92rem; line-height:1.5; border-bottom:1px dashed var(--line); color:var(--ink); }
+  .steps li .n{ flex:0 0 20px; color:var(--caramel-strong); font-weight:800; }
   .tierBadge{ display:inline-block; margin-top:14px; padding:5px 12px; border-radius:999px; font-size:0.78rem; font-weight:800; }
   .tier1{ background: #ffb457; color:#241408; }
   .tier2{ background: #6ee08f; color:#0c2f18; }
   .tier3{ background: #e8dcc8; color:#241408; }
-  .sheetAdd{
-    margin-top:20px; width:100%; padding:14px; border-radius:12px; border:none;
+  .detailAdd{
+    margin-top:16px; width:100%; padding:14px; border-radius:12px; border:none;
     color: #ffffff; font-weight:800; font-size:1rem;
   }
   .closeX{ position:absolute; top:14px; right:16px; background:none; border:none; color:#e8dcc8; font-size:1.3rem; }
@@ -210,13 +202,6 @@
 </main>
 
 <button class="fab" id="fab"><span>🧾 주문 목록</span><span class="badge" id="fabCount">0</span></button>
-
-<div class="sheet-backdrop" id="backdrop"></div>
-<div class="sheet" id="sheet">
-  <button class="closeX" id="sheetClose">✕</button>
-  <div class="grabber"></div>
-  <div id="sheetContent"></div>
-</div>
 
 <div class="orderPanel" id="orderPanel">
   <div class="opHeader">
@@ -469,7 +454,10 @@ const CUSTOM_OPTIONS = [
 /* ===================== STATE ===================== */
 let order = []; // {uid, name, code, size, ing, steps}
 let activeCat = "전체";
-let sheetItem = null;
+let expandKey = null;   // 목록에서 펼쳐진 항목 키
+let expandSize = null;
+let expandCup = 1;
+let orderExpandUid = null; // 주문 카드에서 펼쳐진 항목 uid
 
 const CATS = ["전체", ...Array.from(new Set(MENU.map(m=>m.cat)))];
 
@@ -573,38 +561,7 @@ function matches(item, q){
   return item.n.toLowerCase().includes(q) || (item.c||'').toLowerCase().includes(q);
 }
 
-function renderList(){
-  const q = searchEl.value;
-  const filtered = MENU.filter(m => (activeCat==="전체" || m.cat===activeCat) && matches(m,q));
-  listEl.innerHTML = '';
-  emptyMsg.style.display = filtered.length ? 'none' : 'block';
-  filtered.forEach((item)=>{
-    const idx = MENU.indexOf(item);
-    const col = catColor(item.cat);
-    const row = document.createElement('div');
-    row.className = 'item';
-    row.style.borderLeftColor = col;
-    row.innerHTML = `
-      ${thumb(item, 44)}
-      <div class="left">
-        <div class="name">${item.n}${item.c? ' <span style="color:var(--ink-2);font-weight:600;font-size:0.78rem;">'+item.c+'</span>':''}</div>
-        <div class="meta"><span style="color:${col};font-weight:700;">${item.cat}</span> <span class="sizes">· ${item.sizes.join('/')}</span></div>
-      </div>
-      <div class="addbtn" data-idx="${idx}" style="color:${col};">＋</div>
-    `;
-    row.querySelector('.left').onclick = ()=> openSheet(item);
-    row.querySelector('.addbtn').onclick = (e)=>{ e.stopPropagation(); quickAdd(item); };
-    listEl.appendChild(row);
-  });
-}
-searchEl.addEventListener('input', renderList);
-renderList();
-
-/* ===================== DETAIL SHEET ===================== */
-const sheet = document.getElementById('sheet');
-const backdrop = document.getElementById('backdrop');
-const sheetContent = document.getElementById('sheetContent');
-let sheetSize = null;
+function keyOf(item){ return item.n+'__'+item.c; }
 
 function classify(item){
   const t = item.steps.join(' ');
@@ -613,57 +570,108 @@ function classify(item){
   return {tier:3, cls:'tier3', label:'⚡ 단순 조합 — 나중에 착수'};
 }
 
-function openSheet(item){
-  sheetItem = item;
-  sheetSize = item.sizes[0];
-  renderSheet();
-  sheet.classList.add('open');
-  backdrop.classList.add('open');
+// 블렌디드(블렌더/빙삭) 음료의 잔 수 배율 계산 — 숫자·"숫자(메모)" 형태 모두 처리
+function trimNum(n){
+  const r = Math.round(n*100)/100;
+  return String(r);
 }
-function closeSheet(){
-  sheet.classList.remove('open');
-  backdrop.classList.remove('open');
+function scaleVal(val, mult){
+  if(!mult || mult===1) return val;
+  if(typeof val === 'number') return trimNum(val*mult);
+  if(typeof val === 'string'){
+    const m = val.match(/^(\d+(?:\.\d+)?)/);
+    if(m){ return trimNum(parseFloat(m[1])*mult); }
+  }
+  return val;
 }
-document.getElementById('sheetClose').onclick = closeSheet;
-backdrop.onclick = closeSheet;
-
-function renderSheet(){
-  const item = sheetItem;
-  const tier = classify(item);
-  const ingRows = item.ing.map(row=>{
-    const val = row[sheetSize];
+function ingRowsHTML(item, size, cup, isBlend){
+  return item.ing.map(row=>{
+    let val = row[size];
     if(val===undefined || val===null) return '';
+    if(isBlend && cup && cup!==1) val = scaleVal(val, cup);
     return `<tr><td>${row.m}</td><td>${val} ${row.u||''}</td></tr>`;
   }).join('');
-  const stepsLi = item.steps.map((s,i)=>`<li><span class="n">${i+1}</span><span>${s}</span></li>`).join('');
-  const col = catColorBright(item.cat);
-  sheetContent.innerHTML = `
-    <div style="display:flex; align-items:center; gap:12px;">
-      ${thumb(item, 56, true)}
-      <div>
-        <h2>${item.n}</h2>
-        <div class="code" style="color:${col};font-weight:800;">${item.cat}${item.c? ' · '+item.c : ''}</div>
+}
+
+function renderList(){
+  const q = searchEl.value;
+  const filtered = MENU.filter(m => (activeCat==="전체" || m.cat===activeCat) && matches(m,q));
+  listEl.innerHTML = '';
+  emptyMsg.style.display = filtered.length ? 'none' : 'block';
+  filtered.forEach((item)=>{
+    const idx = MENU.indexOf(item);
+    const col = catColor(item.cat);
+    const k = keyOf(item);
+    const isOpen = expandKey===k;
+    const row = document.createElement('div');
+    row.className = 'item';
+    row.style.borderLeftColor = col;
+    row.innerHTML = `
+      ${thumb(item, 44)}
+      <div class="left">
+        <div class="name">${item.n}${item.c? ' <span style="color:var(--ink-2);font-weight:600;font-size:0.78rem;">'+item.c+'</span>':''} <span style="color:var(--ink-2);font-weight:400;">${isOpen?'▲':'▼'}</span></div>
+        <div class="meta"><span style="color:${col};font-weight:700;">${item.cat}</span> <span class="sizes">· ${item.sizes.join('/')}</span></div>
       </div>
+      <div class="addbtn" data-idx="${idx}" style="color:${col};">＋</div>
+    `;
+    row.querySelector('.left').onclick = ()=>{
+      if(expandKey===k){ expandKey=null; }
+      else { expandKey=k; expandSize=item.sizes[0]; expandCup=1; }
+      renderList();
+    };
+    row.querySelector('.addbtn').onclick = (e)=>{ e.stopPropagation(); quickAdd(item); };
+    listEl.appendChild(row);
+
+    if(isOpen){
+      const panel = document.createElement('div');
+      panel.className = 'detailPanel';
+      panel.innerHTML = buildListDetail(item, col);
+      listEl.appendChild(panel);
+      panel.querySelectorAll('.sizeToggle button').forEach(b=>{
+        b.onclick = ()=>{ expandSize = b.dataset.s; renderList(); };
+      });
+      const minus = panel.querySelector('.cup-minus'), plus = panel.querySelector('.cup-plus');
+      if(minus) minus.onclick = ()=>{ if(expandCup>1) expandCup--; renderList(); };
+      if(plus) plus.onclick = ()=>{ if(expandCup<30) expandCup++; renderList(); };
+      const addBtn = panel.querySelector('.detailAdd');
+      if(addBtn) addBtn.onclick = ()=>{
+        const isBlend = classify(item).tier===1;
+        addToOrder(item, expandSize, isBlend? expandCup : 1);
+        fabPulse();
+      };
+    }
+  });
+}
+
+function buildListDetail(item, col){
+  const tier = classify(item);
+  const isBlend = tier.tier===1;
+  const ingRows = ingRowsHTML(item, expandSize, expandCup, isBlend);
+  const stepsLi = item.steps.map((s,i)=>`<li><span class="n">${i+1}</span><span>${s}</span></li>`).join('');
+  const cupNote = isBlend && expandCup>1 ? ` · ${expandCup}잔 분량` : '';
+  return `
+    <div class="sizeToggle">
+      ${item.sizes.map(s=>`<button data-s="${s}" class="${s===expandSize?'active':''}" style="${s===expandSize?`background:${col};border-color:${col};color:#ffffff;`:''}">${s==='단일'?'단일 사이즈':s}</button>`).join('')}
     </div>
-    <div class="sizeToggle" style="margin-top:14px;">
-      ${item.sizes.map(s=>`<button data-s="${s}" class="${s===sheetSize?'active':''}" style="${s===sheetSize?`background:${col};border-color:${col};color:#241408;`:''}">${s==='단일'?'단일 사이즈':s}</button>`).join('')}
-    </div>
-    <div class="sectionLabel">재료 (${sheetSize})</div>
+    ${isBlend? `
+    <div class="cupStepper">
+      <span class="cupLabel">블렌더 배치량 — 몇 잔 분량으로 볼까요?</span>
+      <div class="cupCtrl">
+        <button class="qty-btn cup-minus">－</button>
+        <span class="qty-num">${expandCup}잔</span>
+        <button class="qty-btn cup-plus">＋</button>
+      </div>
+    </div>` : ''}
+    <div class="sectionLabel">재료 (${expandSize}${cupNote})</div>
     <table class="ing">${ingRows}</table>
     <div class="sectionLabel">제조 공정</div>
     <ul class="steps">${stepsLi}</ul>
     <div class="tierBadge ${tier.cls}">${tier.label}</div>
-    <button class="sheetAdd" id="sheetAddBtn" style="background:${col};color:#241408;">이 음료 주문에 담기 (${sheetSize})</button>
+    <button class="detailAdd" style="background:${col};">이 음료 주문에 담기 (${expandSize}${cupNote})</button>
   `;
-  sheetContent.querySelectorAll('.sizeToggle button').forEach(b=>{
-    b.onclick = ()=>{ sheetSize = b.dataset.s; renderSheet(); };
-  });
-  document.getElementById('sheetAddBtn').onclick = ()=>{
-    addToOrder(item, sheetSize);
-    closeSheet();
-    openOrderPanel();
-  };
 }
+searchEl.addEventListener('input', renderList);
+renderList();
 
 function quickAdd(item){
   addToOrder(item, item.sizes[0]);
@@ -676,15 +684,16 @@ function fabPulse(){
 }
 
 /* ===================== ORDER QUEUE ===================== */
-function addToOrder(item, size){
+function addToOrder(item, size, qty){
+  qty = qty || 1;
   const existing = order.find(o=> !o.done && o.name===item.n && o.size===size);
   if(existing){
-    existing.qty += 1;
+    existing.qty += qty;
   } else {
     order.push({
       uid: Date.now()+Math.random(),
       name: item.n, code: item.c, cat: item.cat, size,
-      steps: item.steps, done:false, qty:1,
+      steps: item.steps, done:false, qty,
       menuItem: item,
       tier: classify(item)
     });
@@ -703,6 +712,23 @@ function suggestOrder(list){
     if(a.tier.tier !== b.tier.tier) return a.tier.tier - b.tier.tier;
     return b.steps.length - a.steps.length;
   });
+}
+
+function buildOrderDetail(o, col){
+  const item = o.menuItem;
+  const tier = classify(item);
+  const isBlend = tier.tier===1;
+  const cup = isBlend ? o.qty : 1;
+  const ingRows = ingRowsHTML(item, o.size, cup, isBlend);
+  const stepsLi = item.steps.map((s,i)=>`<li><span class="n">${i+1}</span><span>${s}</span></li>`).join('');
+  const cupNote = isBlend && o.qty>1 ? ` · ${o.qty}잔 분량으로 자동 계산` : '';
+  return `
+    <div class="sectionLabel" style="margin-top:0;">재료 (${o.size}${cupNote})</div>
+    <table class="ing">${ingRows}</table>
+    <div class="sectionLabel">제조 공정</div>
+    <ul class="steps">${stepsLi}</ul>
+    <div class="tierBadge ${tier.cls}">${tier.label}</div>
+  `;
 }
 
 const orderPanel = document.getElementById('orderPanel');
@@ -734,13 +760,14 @@ function renderOrder(){
   let html = '';
   sorted.forEach((o, i)=>{
     const col = catColor(o.cat);
+    const isOpen = orderExpandUid===o.uid;
     html += `
     <div class="orderCard" style="border-left:3px solid ${col};">
       <div class="rank" style="background:${col};">${i+1}</div>
       <div class="oc-top oc-clickable" data-open="${o.uid}">
         ${thumb(o.menuItem, 46)}
         <div>
-          <div class="oc-name">${o.name}</div>
+          <div class="oc-name">${o.name} <span style="color:var(--ink-2);font-weight:400;font-size:0.85rem;">${isOpen?'▲':'▼'}</span></div>
           <div class="oc-size"><span style="color:${col};font-weight:700;">${o.cat}</span> · ${o.size} 사이즈</div>
         </div>
       </div>
@@ -750,6 +777,7 @@ function renderOrder(){
         <span class="qty-num">${o.qty}잔</span>
         <button class="qty-btn plus" data-uid="${o.uid}">＋</button>
       </div>
+      ${isOpen ? `<div class="detailPanel" style="margin:12px 0 0;">${buildOrderDetail(o, col)}</div>` : ''}
       <div class="oc-actions">
         <button class="done-btn" data-uid="${o.uid}">✓ 제조 완료</button>
         <button class="del-btn" data-uid="${o.uid}">✕</button>
@@ -761,15 +789,17 @@ function renderOrder(){
     html += `<div class="sectionLabel" style="margin-top:22px;">완료됨</div>`;
     done.forEach(o=>{
       const col = catColor(o.cat);
+      const isOpen = orderExpandUid===o.uid;
       html += `
       <div class="orderCard done" style="border-left:3px solid ${col};">
         <div class="oc-top oc-clickable" data-open="${o.uid}">
           ${thumb(o.menuItem, 46)}
           <div>
-            <div class="oc-name">${o.name}</div>
+            <div class="oc-name">${o.name} <span style="color:var(--ink-2);font-weight:400;font-size:0.85rem;">${isOpen?'▲':'▼'}</span></div>
             <div class="oc-size"><span style="color:${col};font-weight:700;">${o.cat}</span> · ${o.size} 사이즈 · ${o.qty}잔</div>
           </div>
         </div>
+        ${isOpen ? `<div class="detailPanel" style="margin:12px 0 0;">${buildOrderDetail(o, col)}</div>` : ''}
         <div class="oc-actions">
           <button class="done-btn undo" data-uid="${o.uid}">되돌리기</button>
           <button class="del-btn" data-uid="${o.uid}">✕</button>
@@ -784,12 +814,8 @@ function renderOrder(){
 
   opBody.querySelectorAll('.oc-clickable').forEach(el=>{
     el.onclick = ()=>{
-      const o = order.find(x=>x.uid==el.dataset.open);
-      if(!o) return;
-      sheetItem = o.menuItem; sheetSize = o.size;
-      renderSheet();
-      sheet.classList.add('open');
-      backdrop.classList.add('open');
+      orderExpandUid = (orderExpandUid===el.dataset.open) ? null : el.dataset.open;
+      renderOrder();
     };
   });
   opBody.querySelectorAll('.done-btn').forEach(b=>{
