@@ -617,12 +617,32 @@ function ingRowsHTML(item, size, cup, isBlend){
 /* ===================== 재료 음성으로 읽어주기 (TTS) ===================== */
 // 손이 바쁠 때 화면을 안 보고도 재료만 짧게, 계속 반복해서 들을 수 있게
 const speakState = { active:false, timer:null };
+
+// 샷/펌프는 바리스타 용어인 "원샷·투샷·쓰리샷" 식으로 읽고, 나머지 단위는 한글 단위명으로 읽는다.
+const SHOT_PUMP_WORDS = {1:'원',2:'투',3:'쓰리',4:'포',5:'파이브',6:'식스',7:'세븐',8:'에잇',9:'나인',10:'텐'};
+const UNIT_WORDS = { g:'그램', kg:'킬로그램', ml:'밀리리터', l:'리터', ea:'개', cm:'센티미터', pinch:'꼬집', tsp:'티스푼', tbsp:'큰술', cup:'컵', fl_oz:'플루이드온스', oz:'온스', lb:'파운드' };
+
+function numOnly(val){
+  const s = String(val);
+  const m = s.match(/^(\d+(?:\.\d+)?)/);
+  if(m) return m[1];
+  return s.replace(/\([^)]*\)/g,'').trim();
+}
+function speakUnitPhrase(numStr, unit){
+  const n = parseFloat(numStr);
+  if(unit==='shot') return (SHOT_PUMP_WORDS[n] || numStr) + '샷';
+  if(unit==='pump') return (SHOT_PUMP_WORDS[n] || numStr) + '펌프';
+  if(!unit) return numStr;
+  return numStr + (UNIT_WORDS[unit] || unit);
+}
 function ingLines(item, size, cup, isBlend){
   return item.ing.map(row=>{
     let val = row[size];
     if(val===undefined || val===null) return null;
     if(isBlend && cup && cup!==1) val = scaleVal(val, cup);
-    return `${row.m} ${val}${row.u||''}`;
+    const numStr = numOnly(val);
+    const name = String(row.m).replace(/\([^)]*\)/g,'').trim();
+    return `${name} ${speakUnitPhrase(numStr, row.u)}`;
   }).filter(Boolean);
 }
 function stopSpeaking(){
