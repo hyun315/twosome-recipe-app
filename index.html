@@ -182,6 +182,15 @@
   .qty-num{ font-weight:800; font-size:0.95rem; color:var(--ink); min-width:38px; text-align:center; }
   .oc-clickable{ cursor:pointer; }
 
+  /* 재료 읽어주기(TTS) 버튼 */
+  .ingHead{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:14px; }
+  .ingHead .sectionLabel{ margin:0; }
+  .speakBtn{
+    flex:0 0 auto; padding:6px 12px; border-radius:999px; border:1px solid var(--line);
+    background:#ffffff; color:var(--caramel-strong); font-weight:800; font-size:0.78rem;
+  }
+  .speakBtn.speaking{ background: var(--caramel-strong); color:#ffffff; border-color:var(--caramel-strong); }
+
   /* POS 사진 인식 */
   #scanStatus{ background:var(--paper-2); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin: 6px 0 14px; font-size:0.85rem; color:var(--ink); }
   #scanStatus .scanTitle{ font-weight:800; margin-bottom:6px; }
@@ -605,7 +614,50 @@ function ingRowsHTML(item, size, cup, isBlend){
   }).join('');
 }
 
+/* ===================== 재료 음성으로 읽어주기 (TTS) ===================== */
+// 손이 바쁠 때 화면을 안 보고도 재료만 짧게, 계속 반복해서 들을 수 있게
+const speakState = { active:false, timer:null };
+function ingLines(item, size, cup, isBlend){
+  return item.ing.map(row=>{
+    let val = row[size];
+    if(val===undefined || val===null) return null;
+    if(isBlend && cup && cup!==1) val = scaleVal(val, cup);
+    return `${row.m} ${val}${row.u||''}`;
+  }).filter(Boolean);
+}
+function stopSpeaking(){
+  speakState.active = false;
+  if(speakState.timer){ clearTimeout(speakState.timer); speakState.timer = null; }
+  if(window.speechSynthesis) speechSynthesis.cancel();
+  document.querySelectorAll('.speakBtn').forEach(b=>{ b.textContent = '🔊 재료 읽어주기'; b.classList.remove('speaking'); });
+}
+function toggleSpeak(btnEl, item, size, cup, isBlend){
+  if(speakState.active){ stopSpeaking(); return; }
+  if(!window.speechSynthesis){ alert('이 브라우저는 음성 읽기를 지원하지 않아요.'); return; }
+  stopSpeaking();
+  speakState.active = true;
+  btnEl.textContent = '⏹ 읽기 중지';
+  btnEl.classList.add('speaking');
+  const lines = ingLines(item, size, cup, isBlend);
+  if(lines.length===0){ stopSpeaking(); return; }
+  function speakOne(idx){
+    if(!speakState.active) return;
+    if(idx>=lines.length){
+      speakState.timer = setTimeout(()=> speakOne(0), 1000);
+      return;
+    }
+    const utter = new SpeechSynthesisUtterance(lines[idx]);
+    utter.lang = 'ko-KR';
+    utter.rate = 0.98;
+    utter.onend = ()=>{ if(speakState.active) speakOne(idx+1); };
+    utter.onerror = ()=>{ if(speakState.active) speakOne(idx+1); };
+    speechSynthesis.speak(utter);
+  }
+  speakOne(0);
+}
+
 function renderList(){
+  stopSpeaking();
   const q = searchEl.value;
   const filtered = MENU.filter(m => (activeCat==="전체" || m.cat===activeCat) && matches(m,q));
   listEl.innerHTML = '';
@@ -651,6 +703,11 @@ function renderList(){
         addToOrder(item, expandSize, isBlend? expandCup : 1);
         fabPulse();
       };
+      const speakBtn = panel.querySelector('.speakBtn');
+      if(speakBtn) speakBtn.onclick = ()=>{
+        const isBlend = classify(item).tier===1;
+        toggleSpeak(speakBtn, item, expandSize, expandCup, isBlend);
+      };
     }
   });
 }
@@ -674,7 +731,10 @@ function buildListDetail(item, col){
         <button class="qty-btn cup-plus">＋</button>
       </div>
     </div>` : ''}
-    <div class="sectionLabel">재료 (${expandSize}${cupNote})</div>
+    <div class="ingHead">
+      <div class="sectionLabel">재료 (${expandSize}${cupNote})</div>
+      <button class="speakBtn">🔊 재료 읽어주기</button>
+    </div>
     <table class="ing">${ingRows}</table>
     <div class="sectionLabel">제조 공정</div>
     <ul class="steps">${stepsLi}</ul>
@@ -735,7 +795,10 @@ function buildOrderDetail(o, col){
   const stepsLi = item.steps.map((s,i)=>`<li><span class="n">${i+1}</span><span>${s}</span></li>`).join('');
   const cupNote = isBlend && o.qty>1 ? ` · ${o.qty}잔 분량으로 자동 계산` : '';
   return `
-    <div class="sectionLabel" style="margin-top:0;">재료 (${o.size}${cupNote})</div>
+    <div class="ingHead" style="margin-top:0;">
+      <div class="sectionLabel" style="margin:0;">재료 (${o.size}${cupNote})</div>
+      <button class="speakBtn" data-uid="${o.uid}">🔊 재료 읽어주기</button>
+    </div>
     <table class="ing">${ingRows}</table>
     <div class="sectionLabel">제조 공정</div>
     <ul class="steps">${stepsLi}</ul>
@@ -746,7 +809,7 @@ function buildOrderDetail(o, col){
 const orderPanel = document.getElementById('orderPanel');
 const opBody = document.getElementById('opBody');
 document.getElementById('fab').onclick = openOrderPanel;
-document.getElementById('opClose').onclick = ()=> orderPanel.classList.remove('open');
+document.getElementById('opClose').onclick = ()=>{ stopSpeaking(); orderPanel.classList.remove('open'); };
 document.getElementById('clearAll').onclick = ()=>{
   if(order.length && confirm('현재 주문 목록을 모두 비울까요?')){ order=[]; updateFab(); renderOrder(); }
 };
@@ -757,6 +820,7 @@ function openOrderPanel(){
 }
 
 function renderOrder(){
+  stopSpeaking();
   if(order.length===0){
     opBody.innerHTML = `<div class="queueEmpty">담긴 음료가 없어요.<br>메뉴에서 ＋ 버튼을 눌러 주문을 담아보세요.</div>`;
     return;
@@ -828,6 +892,17 @@ function renderOrder(){
     el.onclick = ()=>{
       orderExpandUid = (orderExpandUid===el.dataset.open) ? null : el.dataset.open;
       renderOrder();
+    };
+  });
+  opBody.querySelectorAll('.speakBtn').forEach(b=>{
+    b.onclick = (e)=>{
+      e.stopPropagation();
+      const o = order.find(x=>x.uid==b.dataset.uid);
+      if(!o) return;
+      const item = o.menuItem;
+      const isBlend = classify(item).tier===1;
+      const cup = isBlend ? o.qty : 1;
+      toggleSpeak(b, item, o.size, cup, isBlend);
     };
   });
   opBody.querySelectorAll('.done-btn').forEach(b=>{
