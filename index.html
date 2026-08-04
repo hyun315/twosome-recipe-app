@@ -137,25 +137,30 @@
   .opBody{ padding: 14px 16px 120px; max-width:720px; margin:0 auto; background:var(--paper); }
   .queueEmpty{ text-align:center; padding:60px 20px; color:var(--ink-2); font-size:0.9rem; }
 
-  .orderCard{
-    background: var(--paper-2); border:1px solid var(--line); border-radius:14px;
-    padding:14px; margin-top:12px; position:relative;
+  .orderRow{ display:flex; gap:10px; margin-top:10px; align-items:stretch; }
+  .compactCard{
+    flex:1; min-width:0; background: var(--paper-2); border:1.5px solid var(--line); border-radius:13px;
+    padding:10px; position:relative;
   }
-  .orderCard .rank{
-    position:absolute; left:-10px; top:-10px; width:30px; height:30px; border-radius:50%;
-    background: var(--caramel); color:#ffffff; font-weight:800; font-size:0.95rem;
-    display:flex; align-items:center; justify-content:center; box-shadow:0 3px 8px rgba(0,0,0,0.3);
+  .compactCard .rank{
+    position:absolute; left:-7px; top:-7px; width:22px; height:22px; border-radius:50%;
+    background: var(--caramel); color:#ffffff; font-weight:800; font-size:0.72rem;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.3);
   }
-  .orderCard.done{ opacity:0.55; }
-  .orderCard .oc-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
-  .orderCard .oc-name{ font-weight:800; font-size:1.02rem; color:var(--ink); }
-  .orderCard .oc-size{ font-size:0.78rem; margin-top:2px; font-weight:600; color:var(--ink-2); }
-  .orderCard .oc-reason{ font-size:0.82rem; color:var(--ink-2); margin-top:6px; line-height:1.45; }
-  .oc-actions{ display:flex; gap:8px; margin-top:10px; }
-  .oc-actions button{ flex:1; padding:10px 0; border-radius:9px; border:1px solid var(--line); background:#ffffff; color:var(--ink); font-size:0.85rem; font-weight:700;}
-  .oc-actions button.done-btn{ background: var(--mint); color:#ffffff; border-color:var(--mint); }
-  .oc-actions button.done-btn.undo{ background: #ffffff; color:var(--ink-2); }
-  .oc-actions button.del-btn{ background: var(--danger); color: #ffffff; border-color:var(--danger); flex:0 0 46px; }
+  .compactCard.done{ opacity:0.55; }
+  .compactCard .cc-top{ display:flex; align-items:center; gap:8px; cursor:pointer; }
+  .compactCard .cc-name{ font-weight:800; font-size:0.85rem; color:var(--ink); line-height:1.25;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .compactCard .cc-meta{ font-size:0.68rem; margin-top:2px; font-weight:600; color:var(--ink-2); }
+  .compactCard .cc-qty{ display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
+  .compactCard .cc-qty .qty-btn{ width:26px; height:26px; border-radius:7px; font-size:0.9rem; padding:0; }
+  .compactCard .cc-qty .qty-num{ font-size:0.8rem; min-width:auto; }
+  .cc-actions{ display:flex; gap:6px; margin-top:8px; }
+  .cc-actions button{ flex:1; padding:6px 0; border-radius:8px; border:1px solid var(--line); background:#ffffff; color:var(--ink); font-size:0.72rem; font-weight:700;}
+  .cc-actions button.done-btn{ background: var(--mint); color:#ffffff; border-color:var(--mint); }
+  .cc-actions button.done-btn.undo{ background: #ffffff; color:var(--ink-2); }
+  .cc-actions button.del-btn{ background: var(--danger); color: #ffffff; border-color:var(--danger); flex:0 0 30px; }
+  .oc-reason{ font-size:0.82rem; color:var(--ink-2); line-height:1.45; }
 
   .guideNote{ background: var(--paper-2); border:1px solid var(--line); border-radius:12px; padding:12px 14px; font-size:0.82rem; color:var(--ink-2); margin-top:14px; line-height:1.55;}
   .guideNote b{ color:var(--caramel-strong); }
@@ -613,6 +618,32 @@ function openOrderPanel(){
   orderPanel.classList.add('open');
 }
 
+function compactCard(o, rank, col, isDone){
+  const isOpen = orderExpandUid==o.uid;
+  const sizeLine = isDone ? `${o.size} · ${o.qty}잔` : `${o.size} 사이즈`;
+  return `
+    <div class="compactCard ${isDone?'done':''}" style="border-color:${col};">
+      ${rank!=null ? `<div class="rank" style="background:${col};">${rank}</div>` : ''}
+      <div class="cc-top oc-clickable" data-open="${o.uid}">
+        ${thumb(o.menuItem, 34)}
+        <div style="min-width:0;">
+          <div class="cc-name">${o.name}</div>
+          <div class="cc-meta"><span style="color:${col};font-weight:700;">${o.cat}</span> · ${sizeLine} ${isOpen?'▲':'▼'}</div>
+        </div>
+      </div>
+      ${isDone ? '' : `
+      <div class="cc-qty">
+        <button class="qty-btn minus" data-uid="${o.uid}">－</button>
+        <span class="qty-num">${o.qty}잔</span>
+        <button class="qty-btn plus" data-uid="${o.uid}">＋</button>
+      </div>`}
+      <div class="cc-actions">
+        <button class="done-btn ${isDone?'undo':''}" data-uid="${o.uid}">${isDone?'되돌리기':'✓ 완료'}</button>
+        <button class="del-btn" data-uid="${o.uid}">✕</button>
+      </div>
+    </div>`;
+}
+
 function renderOrder(){
   stopSpeaking();
   if(order.length===0){
@@ -627,58 +658,32 @@ function renderOrder(){
                         : t.tier===2 ? '스팀우유·우려내기가 필요해 시간이 걸려요 — 두 번째로 착수하세요.'
                         : '붓고 담는 단순 조합이라 가장 빨라요 — 마지막에 착수해도 늦지 않아요.';
 
-  let html = '';
-  sorted.forEach((o, i)=>{
-    const col = catColor(o.cat);
-    const isOpen = orderExpandUid==o.uid;
-    html += `
-    <div class="orderCard" style="border-left:3px solid ${col};">
-      <div class="rank" style="background:${col};">${i+1}</div>
-      <div class="oc-top oc-clickable" data-open="${o.uid}">
-        ${thumb(o.menuItem, 46)}
-        <div>
-          <div class="oc-name">${o.name} <span style="color:var(--ink-2);font-weight:400;font-size:0.85rem;">${isOpen?'▲':'▼'}</span></div>
-          <div class="oc-size"><span style="color:${col};font-weight:700;">${o.cat}</span> · ${o.size} 사이즈</div>
-        </div>
-      </div>
-      <div class="oc-reason">${reasonText(o.tier)}</div>
-      <div class="oc-qty">
-        <button class="qty-btn minus" data-uid="${o.uid}">－</button>
-        <span class="qty-num">${o.qty}잔</span>
-        <button class="qty-btn plus" data-uid="${o.uid}">＋</button>
-      </div>
-      ${isOpen ? `<div class="detailPanel" style="margin:12px 0 0;">${buildOrderDetail(o, col)}</div>` : ''}
-      <div class="oc-actions">
-        <button class="done-btn" data-uid="${o.uid}">✓ 제조 완료</button>
-        <button class="del-btn" data-uid="${o.uid}">✕</button>
-      </div>
-    </div>`;
-  });
+  function renderRows(list, isDone){
+    let out = '';
+    for(let i=0; i<list.length; i+=2){
+      const pair = list.slice(i, i+2);
+      out += `<div class="orderRow">${pair.map((o,j)=> compactCard(o, isDone? null : i+j+1, catColor(o.cat), isDone)).join('')}</div>`;
+      pair.forEach(o=>{
+        if(orderExpandUid==o.uid){
+          const col = catColor(o.cat);
+          out += `<div class="detailPanel" style="margin-top:0;">
+            ${isDone? '' : `<div class="oc-reason" style="margin-bottom:10px;">${reasonText(o.tier)}</div>`}
+            ${buildOrderDetail(o, col)}
+          </div>`;
+        }
+      });
+    }
+    return out;
+  }
+
+  let html = renderRows(sorted, false);
 
   if(done.length){
     html += `<div class="sectionLabel" style="margin-top:22px;">완료됨</div>`;
-    done.forEach(o=>{
-      const col = catColor(o.cat);
-      const isOpen = orderExpandUid==o.uid;
-      html += `
-      <div class="orderCard done" style="border-left:3px solid ${col};">
-        <div class="oc-top oc-clickable" data-open="${o.uid}">
-          ${thumb(o.menuItem, 46)}
-          <div>
-            <div class="oc-name">${o.name} <span style="color:var(--ink-2);font-weight:400;font-size:0.85rem;">${isOpen?'▲':'▼'}</span></div>
-            <div class="oc-size"><span style="color:${col};font-weight:700;">${o.cat}</span> · ${o.size} 사이즈 · ${o.qty}잔</div>
-          </div>
-        </div>
-        ${isOpen ? `<div class="detailPanel" style="margin:12px 0 0;">${buildOrderDetail(o, col)}</div>` : ''}
-        <div class="oc-actions">
-          <button class="done-btn undo" data-uid="${o.uid}">되돌리기</button>
-          <button class="del-btn" data-uid="${o.uid}">✕</button>
-        </div>
-      </div>`;
-    });
+    html += renderRows(done, true);
   }
 
-  html += `<div class="guideNote"><b>착수 순서 로직</b> · 여러 음료가 동시에 들어오면, 시간이 오래 걸리는 작업(블렌더·빙삭)부터 시작하고, 스팀우유 작업을 다음으로, 붓기만 하면 되는 단순 음료를 가장 나중에 시작하면 모든 음료가 비슷한 시점에 완성돼요. 음료 이름을 탭하면 제조법을 바로 볼 수 있어요.</div>`;
+  html += `<div class="guideNote"><b>착수 순서 로직</b> · 여러 음료가 동시에 들어오면, 시간이 오래 걸리는 작업(블렌더·빙삭)부터 시작하고, 스팀우유 작업을 다음으로, 붓기만 하면 되는 단순 음료를 가장 나중에 시작하면 모든 음료가 비슷한 시점에 완성돼요. 카드를 탭하면 바로 아래에 제조법이 펼쳐져요.</div>`;
 
   opBody.innerHTML = html;
 
