@@ -770,11 +770,17 @@ function matchMenuItem(rawName){
   const target = normBase(rawName);
   if(!target) return null;
   const iced = isIcedName(rawName);
-  let candidates = MENU.filter(item=>{
-    const base = normBase(item.n);
-    return base===target || base.includes(target) || target.includes(base);
-  });
-  // 코드(약어)로도 매칭 시도 — 원본에 코드가 포함돼 있으면 가산점
+  // 1) 정확히 일치
+  let candidates = MENU.filter(item=> normBase(item.n)===target);
+  // 2) 화면 표기가 정식명칭의 축약형인 경우만 허용 (예: "아메리카노"→"카페 아메리카노")
+  //    반대 방향(화면 표기가 더 긴 경우, 예: "레몬카페라떼"⊃"카페라떼")은 다른 음료로 오매칭될 위험이 커서 제외
+  if(candidates.length===0){
+    candidates = MENU.filter(item=>{
+      const base = normBase(item.n);
+      return base.length>target.length && base.includes(target);
+    }).sort((a,b)=> normBase(a.n).length - normBase(b.n).length);
+  }
+  // 3) 코드(약어)로도 매칭 시도 — 원본에 코드가 포함돼 있으면 가산점
   if(candidates.length===0){
     candidates = MENU.filter(item=> item.c && item.c.length>=2 && new RegExp('\\b'+item.c+'\\b','i').test(rawName));
   }
