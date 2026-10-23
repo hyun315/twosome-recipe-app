@@ -139,7 +139,8 @@
 
 
   /* 주문 1건 = 1칸 (티켓) */
-  .tkCard{ flex:1; min-width:0; background:var(--paper-2); border:1.5px solid var(--ink-2); border-radius:13px; padding:8px 8px 6px; }
+  .orderRow{ flex-wrap:wrap; }
+  .tkCard{ flex:1 1 300px; min-width:0; background:var(--paper-2); border:1.5px solid var(--ink-2); border-radius:13px; padding:8px 8px 6px; }
   .tkCard.done{ opacity:0.55; }
   .tkHead{ display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; border-bottom:1.5px solid var(--line); padding-bottom:5px; margin-bottom:4px; }
   .tkNo{ font-weight:800; font-size:0.9rem; color:var(--ink); }
@@ -160,6 +161,9 @@
   .tkRow .done-btn{ background:var(--mint); color:#fff; border-color:var(--mint); }
   .tkRow .done-btn.undo{ background:#fff; color:var(--ink-2); }
   .tkRow .del-btn{ background:var(--danger); color:#fff; border-color:var(--danger); }
+  .tkMiss{ display:flex; align-items:center; gap:6px; padding:6px 7px; margin-top:4px; border-radius:8px; background:#fdeaea; border:1px solid var(--danger); font-size:0.74rem; color:var(--ink); }
+  .tkMiss b{ color:var(--danger); }
+  .tkMiss .x{ margin-left:auto; flex:0 0 auto; width:24px; height:24px; padding:0; border-radius:6px; border:1px solid var(--danger); background:#fff; color:var(--danger); font-weight:800; }
   .tkAll{ width:100%; margin-top:5px; padding:6px 0; border-radius:8px; border:1px solid var(--mint); background:#fff; color:var(--mint); font-weight:800; font-size:0.72rem; }
 
   .orderRow{ display:flex; gap:10px; margin-top:10px; align-items:stretch; }
@@ -283,6 +287,7 @@ let activeCat = "전체";
 let expandKey = null;   // 목록에서 펼쳐진 항목 키
 let expandSize = null;
 let expandCup = 1;
+let missedItems = []; // 메뉴에서 못 찾은 주문 줄 {uid,ticket,tTime,name,qty}
 let orderExpandUid = null; // 주문 카드에서 펼쳐진 항목 uid
 
 const CATS = ["전체", ...Array.from(new Set(MENU.map(m=>m.cat)))];
@@ -602,7 +607,7 @@ function addToOrder(item, size, qty, ticket, tTime){
 function updateFab(){
   const cnt = order.filter(o=>!o.done).reduce((s,o)=>s+o.qty,0);
   document.getElementById('fabCount').textContent = cnt;
-  document.getElementById('fab').classList.toggle('hidden', order.length===0);
+  document.getElementById('fab').classList.toggle('hidden', order.length===0 && missedItems.length===0);
 }
 
 function suggestOrder(list){
@@ -638,7 +643,7 @@ const opBody = document.getElementById('opBody');
 document.getElementById('fab').onclick = openOrderPanel;
 document.getElementById('opClose').onclick = ()=>{ stopSpeaking(); orderPanel.classList.remove('open'); };
 document.getElementById('clearAll').onclick = ()=>{
-  if(order.length && confirm('현재 주문 목록을 모두 비울까요?')){ order=[]; updateFab(); renderOrder(); }
+  if((order.length||missedItems.length) && confirm('현재 주문 목록을 모두 비울까요?')){ order=[]; missedItems=[]; updateFab(); renderOrder(); }
 };
 
 function openOrderPanel(){
@@ -677,10 +682,14 @@ function renderTickets(){
   const groups = {};
   order.forEach(o=>{
     const k = o.ticket || '__manual';
-    (groups[k] = groups[k] || {key:k, time:o.tTime||'', items:[]}).items.push(o);
+    (groups[k] = groups[k] || {key:k, time:o.tTime||'', items:[], missed:[]}).items.push(o);
+  });
+  missedItems.forEach(m=>{
+    const k = m.ticket || '__manual';
+    (groups[k] = groups[k] || {key:k, time:m.tTime||'', items:[], missed:[]}).missed.push(m);
   });
   const list = Object.values(groups);
-  const allDone = g=> g.items.every(o=>o.done);
+  const allDone = g=> g.items.length>0 && g.items.every(o=>o.done);
   const cmp = (a,b)=> ((a.key==='__manual')-(b.key==='__manual')) || String(a.time).localeCompare(String(b.time)) || a.key.localeCompare(b.key);
   const act = list.filter(g=>!allDone(g)).sort(cmp);
   const dn = list.filter(allDone).sort(cmp);
@@ -689,14 +698,15 @@ function renderTickets(){
   function card(g){
     const pend = suggestOrder(g.items.filter(o=>!o.done));
     const dn2 = g.items.filter(o=>o.done);
-    const total = g.items.reduce((s,o)=>s+o.qty,0);
+    const total = g.items.reduce((s,o)=>s+o.qty,0) + g.missed.reduce((s,m)=>s+m.qty,0);
     const label = g.key==='__manual' ? '직접 담은 음료' : '주문 '+g.key;
     const rows = pend.map((o,i)=>tkRow(o,i+1)).concat(dn2.map(o=>tkRow(o,null))).join('');
     const doneAll = allDone(g);
     return `<div class="tkCard ${doneAll?'done':''}">
       <div class="tkHead"><span class="tkNo">${label}</span><span class="tkTime">${g.time||''}</span><span class="tkTot">총 ${total}잔</span></div>
       ${rows}
-      ${doneAll ? '' : `<button class="tkAll" data-tk="${g.key}">이 주문 전체 완료</button>`}
+      ${g.missed.map(m=>`<div class="tkMiss"><span>⚠️ <b>${m.name}</b> ×${m.qty} — 메뉴에 없음(음료가 아니거나 레시피 미등록)</span><button class="x" data-mid="${m.uid}">✕</button></div>`).join('')}
+      ${doneAll || !g.items.length ? '' : `<button class="tkAll" data-tk="${g.key}">이 주문 전체 완료</button>`}
     </div>`;
   }
   function tkRow(o, rank){
@@ -717,7 +727,7 @@ function renderTickets(){
     let out='';
     for(let i=0;i<gs.length;i+=2){
       const pair = gs.slice(i,i+2);
-      out += `<div class="orderRow">${pair.map(card).join('')}${pair.length<2?'<div style="flex:1"></div>':''}</div>`;
+      out += `<div class="orderRow">${pair.map(card).join('')}${pair.length<2?'<div style="flex:1 1 300px;height:0"></div>':''}</div>`;
       pair.forEach(g=>g.items.forEach(o=>{
         if(orderExpandUid==o.uid){
           out += `<div class="detailPanel" style="margin-top:0;">
@@ -738,7 +748,7 @@ function renderTickets(){
 
 function renderOrder(){
   stopSpeaking();
-  if(order.length===0){
+  if(order.length===0 && missedItems.length===0){
     opBody.innerHTML = `<div class="queueEmpty">담긴 음료가 없어요.<br>메뉴에서 ＋ 버튼을 눌러 주문을 담아보세요.</div>`;
     return;
   }
@@ -768,7 +778,7 @@ function renderOrder(){
     return out;
   }
 
-  const ticketMode = order.some(o=>o.ticket);
+  const ticketMode = order.some(o=>o.ticket) || missedItems.some(m=>m.ticket);
   let html = ticketMode ? renderTickets() : renderRows(sorted, false);
 
   if(!ticketMode && done.length){
@@ -810,10 +820,14 @@ function renderOrder(){
       updateFab(); renderOrder();
     };
   });
+  opBody.querySelectorAll('.tkMiss .x').forEach(b=>{
+    b.onclick = ()=>{ missedItems = missedItems.filter(m=>m.uid!=b.dataset.mid); renderOrder(); };
+  });
   opBody.querySelectorAll('.tkAll').forEach(b=>{
     b.onclick = ()=>{
       const k=b.dataset.tk;
       order.forEach(o=>{ if((o.ticket||'__manual')===k) o.done=true; });
+      missedItems = missedItems.filter(m=>(m.ticket||'__manual')!==k);
       updateFab(); renderOrder();
     };
   });
@@ -953,7 +967,7 @@ scanInput.onchange = async ()=>{
     const tickets = (recognized[0] && Array.isArray(recognized[0].items))
       ? recognized
       : [{ticket:null, time:'', items:recognized}];
-    const existingTickets = new Set(order.filter(o=>o.ticket).map(o=>o.ticket));
+    const existingTickets = new Set(order.filter(o=>o.ticket).map(o=>o.ticket).concat(missedItems.filter(m=>m.ticket).map(m=>m.ticket)));
     const blocks = [];
     let firstEntry = null, nMatched = 0, nTotal = 0, skipped = 0;
     tickets.forEach(t=>{
@@ -972,6 +986,7 @@ scanInput.onchange = async ()=>{
           nMatched++;
           lines.push(`<li><span class="ok">✓</span> ${r.name} → <b>${item.n}</b> · ${size} · ${qty}잔</li>`);
         } else {
+          missedItems.push({uid:Date.now()+Math.random(), ticket:tk, tTime:t.time||'', name:r.name, qty});
           lines.push(`<li><span class="miss">✕</span> ${r.name} (${qty}) — 음료가 아니거나 메뉴에 없어요</li>`);
         }
       });
@@ -984,7 +999,7 @@ scanInput.onchange = async ()=>{
       <button class="scanClose" id="scanCloseBtn">확인</button>
     `;
     wireScanClose();
-    if(nMatched>0){
+    if(nMatched>0 || missedItems.length>0){
       if(firstEntry) orderExpandUid = firstEntry.uid; // 첫 메뉴 레시피를 바로 펼쳐서 보여줌
       openOrderPanel();
     }
