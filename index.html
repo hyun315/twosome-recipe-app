@@ -137,6 +137,31 @@
   .opBody{ padding: 14px 16px 120px; max-width:720px; margin:0 auto; background:var(--paper); }
   .queueEmpty{ text-align:center; padding:60px 20px; color:var(--ink-2); font-size:0.9rem; }
 
+
+  /* 주문 1건 = 1칸 (티켓) */
+  .tkCard{ flex:1; min-width:0; background:var(--paper-2); border:1.5px solid var(--ink-2); border-radius:13px; padding:8px 8px 6px; }
+  .tkCard.done{ opacity:0.55; }
+  .tkHead{ display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; border-bottom:1.5px solid var(--line); padding-bottom:5px; margin-bottom:4px; }
+  .tkNo{ font-weight:800; font-size:0.9rem; color:var(--ink); }
+  .tkTime{ font-size:0.68rem; color:var(--ink-2); font-weight:600; }
+  .tkTot{ margin-left:auto; font-size:0.7rem; font-weight:700; color:var(--ink-2); }
+  .tkRow{ display:flex; align-items:center; gap:4px; padding:5px 0; border-bottom:1px dashed var(--line); }
+  .tkRow:last-of-type{ border-bottom:none; }
+  .tkRow.done .n{ text-decoration:line-through; opacity:0.6; }
+  .tkMain{ display:flex; align-items:center; gap:5px; flex:1; min-width:0; cursor:pointer; }
+  .tkMain .rk{ flex:0 0 auto; width:17px; height:17px; border-radius:50%; background:var(--caramel); color:#fff; font-size:0.62rem; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .tkName{ min-width:0; }
+  .tkName .n{ font-weight:800; font-size:0.78rem; color:var(--ink); line-height:1.2; word-break:keep-all; }
+  .tkName .m{ font-size:0.64rem; font-weight:700; color:var(--ink-2); }
+  .tkCtl{ display:flex; align-items:center; gap:2px; flex:0 0 auto; }
+  .tkCtl .qty-btn{ width:22px; height:22px; border-radius:6px; font-size:0.8rem; padding:0; }
+  .tkCtl .qty-num{ font-size:0.78rem; min-width:14px; text-align:center; font-weight:800; color:var(--ink); }
+  .tkRow .done-btn, .tkRow .del-btn{ flex:0 0 auto; width:26px; height:26px; padding:0; border-radius:7px; border:1px solid var(--line); font-size:0.74rem; font-weight:800; }
+  .tkRow .done-btn{ background:var(--mint); color:#fff; border-color:var(--mint); }
+  .tkRow .done-btn.undo{ background:#fff; color:var(--ink-2); }
+  .tkRow .del-btn{ background:var(--danger); color:#fff; border-color:var(--danger); }
+  .tkAll{ width:100%; margin-top:5px; padding:6px 0; border-radius:8px; border:1px solid var(--mint); background:#fff; color:var(--mint); font-weight:800; font-size:0.72rem; }
+
   .orderRow{ display:flex; gap:10px; margin-top:10px; align-items:stretch; }
   .compactCard{
     flex:1; min-width:0; background: var(--paper-2); border:1.5px solid var(--line); border-radius:13px;
@@ -554,16 +579,17 @@ function fabPulse(){
 }
 
 /* ===================== ORDER QUEUE ===================== */
-function addToOrder(item, size, qty){
+function addToOrder(item, size, qty, ticket, tTime){
   qty = qty || 1;
-  const existing = order.find(o=> !o.done && o.name===item.n && o.size===size);
+  ticket = ticket || null;
+  const existing = order.find(o=> !o.done && o.name===item.n && o.size===size && (o.ticket||null)===ticket);
   let entry = existing;
   if(existing){
     existing.qty += qty;
   } else {
     entry = {
       uid: Date.now()+Math.random(),
-      name: item.n, code: item.c, cat: item.cat, size,
+      name: item.n, code: item.c, cat: item.cat, size, ticket, tTime: tTime||'',
       steps: item.steps, done:false, qty,
       menuItem: item,
       tier: classify(item)
@@ -646,6 +672,70 @@ function compactCard(o, rank, col, isDone){
     </div>`;
 }
 
+
+function renderTickets(){
+  const groups = {};
+  order.forEach(o=>{
+    const k = o.ticket || '__manual';
+    (groups[k] = groups[k] || {key:k, time:o.tTime||'', items:[]}).items.push(o);
+  });
+  const list = Object.values(groups);
+  const allDone = g=> g.items.every(o=>o.done);
+  const cmp = (a,b)=> ((a.key==='__manual')-(b.key==='__manual')) || String(a.time).localeCompare(String(b.time)) || a.key.localeCompare(b.key);
+  const act = list.filter(g=>!allDone(g)).sort(cmp);
+  const dn = list.filter(allDone).sort(cmp);
+  const reasonText = t => t.tier===1 ? '오래 걸리는 블렌더/빙삭 작업 — 가장 먼저 시작하세요.' : t.tier===2 ? '스팀우유·우려내기가 필요해요 — 두 번째로 착수하세요.' : '붓고 담는 단순 조합 — 마지막에 착수해도 늦지 않아요.';
+
+  function card(g){
+    const pend = suggestOrder(g.items.filter(o=>!o.done));
+    const dn2 = g.items.filter(o=>o.done);
+    const total = g.items.reduce((s,o)=>s+o.qty,0);
+    const label = g.key==='__manual' ? '직접 담은 음료' : '주문 '+g.key;
+    const rows = pend.map((o,i)=>tkRow(o,i+1)).concat(dn2.map(o=>tkRow(o,null))).join('');
+    const doneAll = allDone(g);
+    return `<div class="tkCard ${doneAll?'done':''}">
+      <div class="tkHead"><span class="tkNo">${label}</span><span class="tkTime">${g.time||''}</span><span class="tkTot">총 ${total}잔</span></div>
+      ${rows}
+      ${doneAll ? '' : `<button class="tkAll" data-tk="${g.key}">이 주문 전체 완료</button>`}
+    </div>`;
+  }
+  function tkRow(o, rank){
+    const col = catColor(o.cat);
+    const open = orderExpandUid==o.uid;
+    return `<div class="tkRow ${o.done?'done':''}">
+      <div class="tkMain oc-clickable" data-open="${o.uid}">
+        ${rank?`<span class="rk">${rank}</span>`:''}
+        ${thumb(o.menuItem, 28)}
+        <div class="tkName"><div class="n">${o.name}</div><div class="m"><span style="color:${col}">${o.size}</span> ${open?'▲':'▼'}</div></div>
+      </div>
+      <div class="tkCtl"><button class="qty-btn minus" data-uid="${o.uid}">－</button><span class="qty-num">${o.qty}</span><button class="qty-btn plus" data-uid="${o.uid}">＋</button></div>
+      <button class="done-btn ${o.done?'undo':''}" data-uid="${o.uid}">${o.done?'↺':'✓'}</button>
+      <button class="del-btn" data-uid="${o.uid}">✕</button>
+    </div>`;
+  }
+  function rows(gs){
+    let out='';
+    for(let i=0;i<gs.length;i+=2){
+      const pair = gs.slice(i,i+2);
+      out += `<div class="orderRow">${pair.map(card).join('')}${pair.length<2?'<div style="flex:1"></div>':''}</div>`;
+      pair.forEach(g=>g.items.forEach(o=>{
+        if(orderExpandUid==o.uid){
+          out += `<div class="detailPanel" style="margin-top:0;">
+            <div class="oc-reason" style="margin-bottom:6px;font-weight:800;">${o.name} ${o.size} · ${o.qty}잔 ${g.key==='__manual'?'':'· 주문 '+g.key}</div>
+            ${o.done?'':`<div class="oc-reason" style="margin-bottom:10px;">${reasonText(o.tier)}</div>`}
+            ${buildOrderDetail(o, catColor(o.cat))}
+          </div>`;
+        }
+      }));
+    }
+    return out;
+  }
+  let html = rows(act);
+  if(dn.length) html += `<div class="sectionLabel" style="margin-top:22px;">완료된 주문</div>` + rows(dn);
+  html += `<div class="guideNote"><b>한 칸 = 한 주문</b> · 칸 안의 번호는 그 주문 안에서 착수할 순서예요(블렌더 → 스팀 → 단순). 음료 이름을 탭하면 바로 아래에 제조법이 펼쳐져요.</div>`;
+  return html;
+}
+
 function renderOrder(){
   stopSpeaking();
   if(order.length===0){
@@ -678,14 +768,15 @@ function renderOrder(){
     return out;
   }
 
-  let html = renderRows(sorted, false);
+  const ticketMode = order.some(o=>o.ticket);
+  let html = ticketMode ? renderTickets() : renderRows(sorted, false);
 
-  if(done.length){
+  if(!ticketMode && done.length){
     html += `<div class="sectionLabel" style="margin-top:22px;">완료됨</div>`;
     html += renderRows(done, true);
   }
 
-  html += `<div class="guideNote"><b>착수 순서 로직</b> · 여러 음료가 동시에 들어오면, 시간이 오래 걸리는 작업(블렌더·빙삭)부터 시작하고, 스팀우유 작업을 다음으로, 붓기만 하면 되는 단순 음료를 가장 나중에 시작하면 모든 음료가 비슷한 시점에 완성돼요. 카드를 탭하면 바로 아래에 제조법이 펼쳐져요.</div>`;
+  if(!ticketMode) html += `<div class="guideNote"><b>착수 순서 로직</b> · 여러 음료가 동시에 들어오면, 시간이 오래 걸리는 작업(블렌더·빙삭)부터 시작하고, 스팀우유 작업을 다음으로, 붓기만 하면 되는 단순 음료를 가장 나중에 시작하면 모든 음료가 비슷한 시점에 완성돼요. 카드를 탭하면 바로 아래에 제조법이 펼쳐져요.</div>`;
 
   opBody.innerHTML = html;
 
@@ -716,6 +807,13 @@ function renderOrder(){
   opBody.querySelectorAll('.del-btn').forEach(b=>{
     b.onclick = ()=>{
       order = order.filter(x=>x.uid!=b.dataset.uid);
+      updateFab(); renderOrder();
+    };
+  });
+  opBody.querySelectorAll('.tkAll').forEach(b=>{
+    b.onclick = ()=>{
+      const k=b.dataset.tk;
+      order.forEach(o=>{ if((o.ticket||'__manual')===k) o.done=true; });
       updateFab(); renderOrder();
     };
   });
@@ -831,7 +929,7 @@ scanInput.onchange = async ()=>{
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-6",
-          max_tokens: 1500,
+          max_tokens: 3000,
           messages: [{ role: "user", content: [
             { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
             { type: "text", text: SCAN_PROMPT }
@@ -851,29 +949,42 @@ scanInput.onchange = async ()=>{
       return;
     }
 
-    const matchedLines = [], missedLines = [];
-    let firstEntry = null;
-    recognized.forEach(r=>{
-      const qty = Math.max(1, parseInt(r.qty)||1);
-      const item = matchMenuItem(r.name);
-      if(item){
-        const wantSize = extractSize(r.name);
-        const size = (wantSize && item.sizes.includes(wantSize)) ? wantSize : item.sizes[0];
-        const entry = addToOrder(item, size, qty);
-        if(!firstEntry) firstEntry = entry;
-        matchedLines.push(`<li><span class="ok">✓</span> ${r.name} → <b>${item.n}</b> · ${size} · ${qty}잔</li>`);
-      } else {
-        missedLines.push(`<li><span class="miss">✕</span> ${r.name} (${qty}잔) — 메뉴에서 못 찾았어요, 직접 담아주세요</li>`);
-      }
+    // 응답 형식: [{ticket,time,items:[{name,qty}]}] (구형 [{name,qty}]도 허용)
+    const tickets = (recognized[0] && Array.isArray(recognized[0].items))
+      ? recognized
+      : [{ticket:null, time:'', items:recognized}];
+    const existingTickets = new Set(order.filter(o=>o.ticket).map(o=>o.ticket));
+    const blocks = [];
+    let firstEntry = null, nMatched = 0, nTotal = 0, skipped = 0;
+    tickets.forEach(t=>{
+      const tk = t.ticket ? String(t.ticket).trim() : null;
+      if(tk && existingTickets.has(tk)){ skipped++; return; }   // 이미 담긴 주문(같은 화면 재촬영)은 건너뜀
+      const lines = [];
+      (t.items||[]).forEach(r=>{
+        nTotal++;
+        const qty = Math.max(1, parseInt(r.qty)||1);
+        const item = matchMenuItem(r.name);
+        if(item){
+          const wantSize = extractSize(r.name);
+          const size = (wantSize && item.sizes.includes(wantSize)) ? wantSize : item.sizes[0];
+          const entry = addToOrder(item, size, qty, tk, t.time||'');
+          if(!firstEntry || String(entry.tTime||'~').localeCompare(String(firstEntry.tTime||'~'))<0) firstEntry = entry;
+          nMatched++;
+          lines.push(`<li><span class="ok">✓</span> ${r.name} → <b>${item.n}</b> · ${size} · ${qty}잔</li>`);
+        } else {
+          lines.push(`<li><span class="miss">✕</span> ${r.name} (${qty}) — 음료가 아니거나 메뉴에 없어요</li>`);
+        }
+      });
+      blocks.push(`<div style="margin-top:6px;"><b>${tk?('주문 '+tk):'인식된 항목'}</b> ${t.time||''}<ul>${lines.join('')}</ul></div>`);
     });
 
     scanStatus.innerHTML = `
-      <div class="scanTitle">📷 인식 결과 — ${recognized.length}개 중 ${matchedLines.length}개 자동으로 담김</div>
-      <ul>${matchedLines.join('')}${missedLines.join('')}</ul>
+      <div class="scanTitle">📷 인식 결과 — 주문 ${blocks.length}건, 품목 ${nTotal}개 중 ${nMatched}개 자동으로 담김${skipped?` (이미 담긴 주문 ${skipped}건 건너뜀)`:''}</div>
+      ${blocks.join('')}
       <button class="scanClose" id="scanCloseBtn">확인</button>
     `;
     wireScanClose();
-    if(matchedLines.length>0){
+    if(nMatched>0){
       if(firstEntry) orderExpandUid = firstEntry.uid; // 첫 메뉴 레시피를 바로 펼쳐서 보여줌
       openOrderPanel();
     }
@@ -891,7 +1002,7 @@ function wireScanClose(){
 }
 
 
-const SCAN_PROMPT = "이 이미지는 투썸플레이스 주방 KDS(주문내역 화면) 사진입니다. 화면에는 여러 개의 주문 카드(티켓)가 격자로 배열되어 있고, 카드마다 주문번호·시간과 함께 품목이 줄줄이 나열되며 각 줄 오른쪽에 수량 숫자가 있습니다. 품목명은 'ice아메리카노R', '바닐라 라떼R', 'ice아메리카노아로마R' 처럼 'ice'(아이스) + 메뉴명 + 사이즈(R/L/M)가 공백 없이 붙어 표기됩니다. 화면에 보이는 모든 주문 카드의 모든 품목을 빠짐없이 읽으세요(노란색 강조 줄 포함, 화면 가장자리에 일부 잘린 카드의 품목도 읽을 수 있는 만큼). 케이크·초 등 음료가 아닌 품목도 이름 그대로 포함하세요. 같은 이름이 여러 카드에 있으면 각각 별도 항목으로 적으세요. 오직 JSON 배열로만 답하고 다른 설명이나 코드블록 표시는 쓰지 마세요: [{\"name\":\"화면 표기 그대로(ice·사이즈 포함)\",\"qty\":수량}]";
+const SCAN_PROMPT = "이 이미지는 투썸플레이스 주방 KDS(주문내역 화면) 사진입니다. 화면에는 주문 카드(티켓)가 격자로 배열되어 있고, 카드 한 칸이 주문 1건입니다. 카드 왼쪽 위에 주문번호(예: 01-0041, 02-0060), 그 아래 접수시각(예: 14:18:34)이 있고, 그 아래에 품목이 줄줄이 나열되며 각 줄 오른쪽에 수량 숫자가 있습니다. 품목명은 'ice아메리카노R', '바닐라 라떼R', 'ice아메리카노아로마R' 처럼 'ice'(아이스) + 메뉴명 + 사이즈(R/L/M)가 공백 없이 붙어 표기됩니다. 화면에 보이는 모든 카드를 빠짐없이 읽고, 각 카드의 품목을 그 카드 안에 묶어서 적으세요(노란색 강조 줄 포함, 화면 가장자리에 일부 잘린 카드·줄도 읽을 수 있는 만큼). 케이크·초 등 음료가 아닌 품목도 이름 그대로 포함하세요. 카드 상단의 '총N개' 숫자와 품목 수량 합이 맞는지 확인하세요. 오직 JSON 배열로만 답하고 다른 설명이나 코드블록 표시는 쓰지 마세요: [{\"ticket\":\"주문번호\",\"time\":\"HH:MM:SS\",\"items\":[{\"name\":\"화면 표기 그대로(ice·사이즈 포함)\",\"qty\":수량}]}]";
 
 // 아이패드 사진은 용량이 커서 업로드 한도에 걸리므로 가로세로 최대 1600px JPEG로 줄임
 function resizeImageToDataUrl(file, maxDim){
